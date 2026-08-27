@@ -11,7 +11,7 @@ export default function HomePage() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D6B15E] to-[#B38E3F] flex items-center justify-center font-bold text-black text-xl shadow-lg">
             ⚡
           </div>
-          <h1 className="font-extrabold text-xl tracking-wider text-[#F2F4F7]">OPENING FORGE</h1>
+          <h1 className="font-extrabold text-xl tracking-wider text-[#F2F4F7]">EnPassant</h1>
         </div>
 
         <Link
@@ -34,7 +34,7 @@ export default function HomePage() {
         </h2>
 
         <p className="text-base text-[#8A919C] max-w-2xl leading-relaxed">
-          Opening Forge connects Stockfish MultiPV analysis, automated game loading from Chess.com & Lichess, positional explanations, and spaced repetition into a continuous learning loop.
+          EnPassant connects Stockfish MultiPV analysis, automated game loading from Chess.com & Lichess, positional explanations, and spaced repetition into a continuous learning loop.
         </p>
 
         <div className="flex items-center gap-4 pt-4">
@@ -54,8 +54,9 @@ export default function HomePage() {
       </main>
 
       <footer className="text-center text-xs text-[#8A919C] border-t border-[#2A2E35] pt-6 max-w-7xl mx-auto w-full">
-        Opening Forge — Privacy-conscious, browser-first chess opening coach. Powered by Stockfish WASM.
+        EnPassant — Privacy-conscious, browser-first chess opening coach. Powered by Stockfish WASM.
       </footer>
+
     </div>
   );
 }

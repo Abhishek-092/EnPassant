@@ -3,9 +3,10 @@ import React from 'react';
 import { AuthProvider } from '@/firebase/auth';
 
 export const metadata = {
-  title: 'Opening Forge - Learn Your Openings. Train Your Mistakes.',
+  title: 'EnPassant - Learn Your Openings. Train Your Mistakes.',
   description: 'Adaptive chess opening learning platform with Stockfish MultiPV analysis, automated game sync, and personal mistake training.',
 };
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

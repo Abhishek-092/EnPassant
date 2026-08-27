@@ -61,9 +61,10 @@ export default function ReplayPage() {
     setClassification(null);
     setExplanation(null);
 
-    const result = await stockfishEngine.analyzePosition(mistake.fen, 3, 12);
-    setCandidates(result.bestMoves);
+    const resCandidates = await stockfishEngine.analyzePosition(mistake.fen, 3, 'TRAINING');
+    setCandidates(resCandidates);
   };
+
 
   const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
     try {

@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -20,6 +21,7 @@ import { useAuth } from '../../firebase/auth';
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -32,7 +34,30 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-[#15171B] border-r border-[#2A2E35] flex flex-col justify-between p-4 h-screen sticky top-0 text-[#F2F4F7]">
+    <>
+      {/* Mobile Top Navbar Bar */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#15171B] border-b border-[#2A2E35] sticky top-0 z-40">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#D6B15E] to-[#B38E3F] flex items-center justify-center font-bold text-black text-sm">
+            ⚡
+          </div>
+          <span className="font-extrabold text-sm text-[#F2F4F7]">EnPassant</span>
+
+        </div>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="p-2 rounded-lg bg-[#1C1F24] border border-[#2A2E35] text-[#D6B15E] text-xs font-bold"
+        >
+          Menu ☰
+        </button>
+      </div>
+
+      <aside
+        className={`${
+          mobileOpen ? 'block' : 'hidden'
+        } md:flex w-full md:w-64 bg-[#15171B] border-r border-[#2A2E35] flex-col justify-between p-4 h-auto md:h-screen md:sticky md:top-0 text-[#F2F4F7] z-40`}
+      >
+
       <div className="flex flex-col gap-6">
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-2 pt-2">
@@ -40,9 +65,10 @@ export const Sidebar: React.FC = () => {
             ⚡
           </div>
           <div>
-            <h1 className="font-extrabold text-base tracking-wider text-[#F2F4F7]">OPENING FORGE</h1>
+            <h1 className="font-extrabold text-base tracking-wider text-[#F2F4F7]">EnPassant</h1>
             <p className="text-[10px] text-[#8A919C] tracking-wide">ADAPTIVE CHESS COACH</p>
           </div>
+
         </div>
 
         {/* Navigation Links */}
@@ -99,5 +125,7 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
     </aside>
+    </>
   );
 };
+

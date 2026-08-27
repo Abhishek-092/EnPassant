@@ -37,10 +37,11 @@ export default function AnalysisPage() {
 
   const triggerAnalysis = async (currentFen: string) => {
     setIsAnalyzing(true);
-    const res = await stockfishEngine.analyzePosition(currentFen, 4, 14);
-    setCandidates(res.bestMoves);
+    const resCandidates = await stockfishEngine.analyzePosition(currentFen, 4, 'DEEP');
+    setCandidates(resCandidates);
     setIsAnalyzing(false);
   };
+
 
   const handleReset = () => {
     const c = new Chess();

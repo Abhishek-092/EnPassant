@@ -52,16 +52,32 @@ class BackgroundAnalysisQueue {
     this.activeCount++;
 
     try {
-      const result = await stockfishEngine.analyzePosition(
+      const candidates = await stockfishEngine.analyzePosition(
         task.fen,
         task.multiPvCount,
-        task.targetDepth
+        'TRAINING'
       );
 
       if (task.onComplete) {
-        task.onComplete(result);
+        task.onComplete({
+          fen: task.fen,
+          fingerprint: {
+            normalizedFen: task.fen,
+            boardHash: 'hash',
+            sideToMove: 'w',
+            transpositionKey: task.fen,
+            castlingRights: '-',
+            enPassantTarget: null,
+          },
+          depth: task.targetDepth,
+          multiPvCount: task.multiPvCount,
+          engineVersion: 'stockfish-18-stable',
+          bestMoves: candidates,
+          timestamp: Date.now(),
+        });
       }
     } catch (err) {
+
       if (task.onError) {
         task.onError(err);
       }

@@ -40,9 +40,10 @@ export default function TrainPage() {
   };
 
   const runEngineAnalysis = async (currentFen: string) => {
-    const result = await stockfishEngine.analyzePosition(currentFen, 3, 12);
-    setCandidates(result.bestMoves);
+    const resCandidates = await stockfishEngine.analyzePosition(currentFen, 3, 'TRAINING');
+    setCandidates(resCandidates);
   };
+
 
   const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
     try {

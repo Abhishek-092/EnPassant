@@ -101,18 +101,26 @@ export default function DashboardPage() {
               <span className="text-xs font-semibold text-[#8A919C]">Opening Mastery</span>
               <Award className="w-4 h-4 text-[#D6B15E]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#F2F4F7]">68%</div>
-            <p className="text-xs text-[#4CAF7D]">Strongest: Classical Caro-Kann (+8%)</p>
+            <div className="text-3xl font-extrabold text-[#F2F4F7]">
+              {recentGames.length > 0
+                ? `${Math.round((recentGames.filter(g => g.result === 'Win').length / recentGames.length) * 100)}%`
+                : 'N/A'}
+            </div>
+            <p className="text-xs text-[#4CAF7D]">
+              {recentGames.length > 0 ? `Based on ${recentGames.length} imported games` : 'Sync games to track mastery'}
+            </p>
           </div>
 
           {/* Active Training Streak */}
           <div className="p-5 rounded-xl bg-[#15171B] border border-[#2A2E35] flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#8A919C]">Training Streak</span>
+              <span className="text-xs font-semibold text-[#8A919C]">Training Session Status</span>
               <Flame className="w-4 h-4 text-[#D6B15E]" />
             </div>
-            <div className="text-3xl font-extrabold text-[#F2F4F7]">5 Days</div>
-            <p className="text-xs text-[#8A919C]">Consistent practice builds instinct</p>
+            <div className="text-3xl font-extrabold text-[#F2F4F7]">
+              {session ? `${session.items.length} Ready` : '0 Drills'}
+            </div>
+            <p className="text-xs text-[#8A919C]">Daily session calculated from mistake history</p>
           </div>
 
           {/* Personal Game Mistakes Tracked */}
@@ -124,9 +132,12 @@ export default function DashboardPage() {
             <div className="text-3xl font-extrabold text-[#F2F4F7]">
               {mistakes.length} Blunders
             </div>
-            <p className="text-xs text-[#D95D5D]">Delayed pawn break in Caro-Kann</p>
+            <p className="text-xs text-[#D95D5D]">
+              {mistakes.length > 0 ? `Latest: ${mistakes[0].openingName}` : 'No game blunders detected'}
+            </p>
           </div>
         </div>
+
 
         {/* Bottom Section: Recent Games & Replay Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

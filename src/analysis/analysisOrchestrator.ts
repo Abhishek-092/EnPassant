@@ -7,6 +7,8 @@ import { classifyMoveAdaptively } from '../engine/adaptiveClassifier';
 import { generateHumanExplanation } from '../explanations/generator';
 import { indexedDBStorage, CachedGame, UserMistakeRecord } from '../storage/indexedDB';
 import { NormalizedGame } from '../providers/GameProvider';
+import { saveUserGame, saveUserMistake } from '../firebase/firestore';
+import { auth } from '../firebase/config';
 
 export interface GameAnalysisSummary {
   gameId: string;
@@ -24,6 +26,7 @@ class AnalysisOrchestrator {
    * 2. Extracts Candidate Positions
    * 3. Schedules Priority Background Stockfish Analysis
    * 4. Identifies Personal Blunders / Mistakes
+   * 5. Persists to both local IndexedDB and remote Firestore
    */
   public async analyzeGame(game: NormalizedGame): Promise<GameAnalysisSummary> {
     const openingDetection = detectOpeningFromMoves(game.moves);
@@ -120,6 +123,12 @@ class AnalysisOrchestrator {
             };
 
             await indexedDBStorage.saveMistake(mistakeRecord);
+
+            // Sync mistake to Firestore if user is authenticated
+            const currentUid = auth.currentUser?.uid;
+            if (currentUid) {
+              await saveUserMistake(currentUid, mistakeRecord);
+            }
           }
         },
       });
@@ -144,6 +153,12 @@ class AnalysisOrchestrator {
     };
 
     await indexedDBStorage.saveGame(cachedGame);
+
+    // Sync game to Firestore if user is authenticated
+    const currentUid = auth.currentUser?.uid;
+    if (currentUid) {
+      await saveUserGame(currentUid, cachedGame);
+    }
 
     return {
       gameId: game.id,

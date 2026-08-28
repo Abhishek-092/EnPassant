@@ -2,61 +2,58 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { BrutalistButton } from '@/components/ui/BrutalistButton';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0E0F11] flex flex-col justify-between p-8 text-[#F2F4F7]">
-      <header className="flex items-center justify-between max-w-7xl mx-auto w-full border-b border-[#2A2E35] pb-6">
+    <div className="min-h-screen bg-[#0B0D10] flex flex-col justify-between p-8 text-[#F0F3F8]">
+      <header className="flex items-center justify-between max-w-7xl mx-auto w-full border-b border-[#242A35] pb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#D6B15E] to-[#B38E3F] flex items-center justify-center font-bold text-black text-xl shadow-lg">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#E5B842] to-[#C99E30] border border-[#F0C450] flex items-center justify-center font-black text-[#0B0D10] text-xl shadow-brutal-sm">
             ⚡
           </div>
-          <h1 className="font-extrabold text-xl tracking-wider text-[#F2F4F7]">EnPassant</h1>
+          <h1 className="font-black text-xl tracking-tight text-[#F0F3F8]">ENPASSANT</h1>
         </div>
 
-        <Link
-          href="/dashboard"
-          className="px-5 py-2.5 rounded-xl bg-[#D6B15E] hover:bg-[#b89547] text-black font-bold text-xs shadow-lg transition-all"
-        >
-          Launch Training App
+        <Link href="/dashboard">
+          <BrutalistButton variant="primary">
+            Launch Training App →
+          </BrutalistButton>
         </Link>
       </header>
 
       <main className="max-w-4xl mx-auto flex flex-col items-center text-center gap-8 py-16">
-        <span className="text-xs uppercase tracking-widest px-3 py-1 rounded-full bg-[#D6B15E]/10 text-[#D6B15E] border border-[#D6B15E]/30 font-bold">
+        <span className="text-xs uppercase tracking-widest px-3.5 py-1 font-mono font-bold bg-[#E5B842]/10 text-[#E5B842] border border-[#E5B842]/30">
           Adaptive Browser-First Chess Coach
         </span>
 
-        <h2 className="text-4xl md:text-6xl font-extrabold text-[#F2F4F7] leading-tight">
+        <h2 className="text-4xl md:text-6xl font-black text-[#F0F3F8] leading-tight tracking-tight uppercase">
           Learn your openings.<br />
           Play your games.<br />
-          <span className="text-[#D6B15E]">Train your mistakes.</span>
+          <span className="text-[#E5B842]">Train your mistakes.</span>
         </h2>
 
-        <p className="text-base text-[#8A919C] max-w-2xl leading-relaxed">
-          EnPassant connects Stockfish MultiPV analysis, automated game loading from Chess.com & Lichess, positional explanations, and spaced repetition into a continuous learning loop.
+        <p className="text-sm md:text-base text-[#94A0B8] max-w-2xl leading-relaxed">
+          EnPassant connects Stockfish 18 MultiPV analysis, automated game loading from Chess.com & Lichess, positional explanations, and spaced repetition into a continuous learning loop.
         </p>
 
         <div className="flex items-center gap-4 pt-4">
-          <Link
-            href="/dashboard"
-            className="px-8 py-3.5 rounded-xl bg-[#D6B15E] text-black font-extrabold text-sm hover:scale-105 transition-all shadow-xl"
-          >
-            Start Free Training
+          <Link href="/dashboard">
+            <BrutalistButton variant="primary" className="px-8 py-3.5 text-sm">
+              Start Free Training
+            </BrutalistButton>
           </Link>
-          <Link
-            href="/openings"
-            className="px-8 py-3.5 rounded-xl bg-[#15171B] border border-[#2A2E35] text-[#F2F4F7] font-extrabold text-sm hover:bg-[#1C1F24] transition-all"
-          >
-            Explore Library
+          <Link href="/openings">
+            <BrutalistButton variant="outline" className="px-8 py-3.5 text-sm">
+              Explore Library
+            </BrutalistButton>
           </Link>
         </div>
       </main>
 
-      <footer className="text-center text-xs text-[#8A919C] border-t border-[#2A2E35] pt-6 max-w-7xl mx-auto w-full">
-        EnPassant — Privacy-conscious, browser-first chess opening coach. Powered by Stockfish WASM.
+      <footer className="text-center text-xs text-[#64748B] border-t border-[#242A35] pt-6 max-w-7xl mx-auto w-full font-mono">
+        EnPassant — Privacy-conscious, browser-first chess opening coach. Powered by Stockfish 18 WASM.
       </footer>
-
     </div>
   );
 }

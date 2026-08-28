@@ -1,14 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
 import {
   signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User as FirebaseUser,
 } from 'firebase/auth';
 import { auth, googleProvider } from './config';
+import { saveUserProfile, loadUserProfile } from './firestore';
+import { autoSyncManager } from '../services/autoSyncService';
 
 export interface UserProfile {
   uid: string;
@@ -26,7 +26,9 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInAsDemo: (username?: string) => void;
   logout: () => Promise<void>;
-  updateUserConnections: (chessCom?: string, lichess?: string) => void;
+  updateUserConnections: (chessCom?: string, lichess?: string) => Promise<void>;
+  updateProfileName: (name: string) => Promise<void>;
+  triggerAutoSync: (force?: boolean) => Promise<{ count: number; error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,37 +37,66 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signInAsDemo: () => {},
   logout: async () => {},
-  updateUserConnections: () => {},
+  updateUserConnections: async () => {},
+  updateProfileName: async () => {},
+  triggerAutoSync: async () => ({ count: 0, error: null }),
 });
+
+const STORAGE_KEY = 'enpassant_user_profile';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 1. Initial Load & Persistence Check
   useEffect(() => {
-    // Check saved local demo profile or Firebase auth state
-    const savedDemo = localStorage.getItem('opening_forge_demo_user');
-    if (savedDemo) {
+    const savedLocal = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    let initialUser: UserProfile | null = null;
+
+    if (savedLocal) {
       try {
-        setUser(JSON.parse(savedDemo));
-        setLoading(false);
-        return;
+        initialUser = JSON.parse(savedLocal);
+        setUser(initialUser);
       } catch {
-        localStorage.removeItem('opening_forge_demo_user');
+        localStorage.removeItem(STORAGE_KEY);
       }
     }
 
-    const unsubscribe = onAuthStateChanged(auth, fbUser => {
+    const unsubscribe = onAuthStateChanged(auth, async fbUser => {
       if (fbUser) {
-        setUser({
+        // Load any stored profile from Firestore
+        const remoteProfile = await loadUserProfile(fbUser.uid);
+        const merged: UserProfile = {
           uid: fbUser.uid,
           email: fbUser.email,
-          displayName: fbUser.displayName || 'Grandmaster Student',
+          displayName: fbUser.displayName || remoteProfile?.displayName || initialUser?.displayName || 'Grandmaster Student',
+          rating: remoteProfile?.rating || initialUser?.rating || 1500,
+          preferredColor: remoteProfile?.preferredColor || initialUser?.preferredColor || 'both',
+          chessComUsername: remoteProfile?.chessComUsername || initialUser?.chessComUsername || '',
+          lichessUsername: remoteProfile?.lichessUsername || initialUser?.lichessUsername || '',
+        };
+
+        setUser(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        await saveUserProfile(merged);
+
+        // Trigger AutoSync on authentication if usernames are configured
+        if (merged.chessComUsername || merged.lichessUsername) {
+          autoSyncManager.autoSync(merged.chessComUsername, merged.lichessUsername);
+        }
+      } else if (!initialUser) {
+        // Create an offline persistent default user so guests can connect and save their usernames effortlessly
+        const guestUser: UserProfile = {
+          uid: `guest_${Date.now()}`,
+          email: null,
+          displayName: 'Grandmaster Student',
           rating: 1500,
           preferredColor: 'both',
-        });
-      } else {
-        setUser(null);
+          chessComUsername: '',
+          lichessUsername: '',
+        };
+        setUser(guestUser);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(guestUser));
       }
       setLoading(false);
     });
@@ -73,11 +104,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  // 2. AutoSync on mount if user already has usernames saved
+  useEffect(() => {
+    if (user && (user.chessComUsername || user.lichessUsername)) {
+      autoSyncManager.autoSync(user.chessComUsername, user.lichessUsername);
+    }
+  }, [user?.chessComUsername, user?.lichessUsername]);
+
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
-      console.warn('Firebase popup failed, switching to demo auth mode:', err);
+      console.warn('Firebase popup failed, fallback to demo player:', err);
       signInAsDemo('Forge Player');
     }
   };
@@ -85,36 +123,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInAsDemo = (username: string = 'Grandmaster Student') => {
     const demoProfile: UserProfile = {
       uid: `demo_${Date.now()}`,
-      email: 'student@openingforge.com',
+      email: 'student@enpassant.com',
       displayName: username,
       rating: 1600,
       preferredColor: 'both',
-      chessComUsername: 'hikaru', // Demo defaults for rich out-of-box experience
+      chessComUsername: 'hikaru',
       lichessUsername: 'magnuscarlsen',
     };
     setUser(demoProfile);
-    localStorage.setItem('opening_forge_demo_user', JSON.stringify(demoProfile));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(demoProfile));
+    autoSyncManager.autoSync(demoProfile.chessComUsername, demoProfile.lichessUsername, true);
   };
 
   const logout = async () => {
-    localStorage.removeItem('opening_forge_demo_user');
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('enpassant_last_sync_time');
     try {
       await firebaseSignOut(auth);
     } catch {
       // Ignored
     }
-    setUser(null);
+    const guestUser: UserProfile = {
+      uid: `guest_${Date.now()}`,
+      email: null,
+      displayName: 'Grandmaster Student',
+      rating: 1500,
+      preferredColor: 'both',
+      chessComUsername: '',
+      lichessUsername: '',
+    };
+    setUser(guestUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(guestUser));
   };
 
-  const updateUserConnections = (chessCom?: string, lichess?: string) => {
+  const updateUserConnections = async (chessCom?: string, lichess?: string) => {
     if (!user) return;
     const updated: UserProfile = {
       ...user,
-      chessComUsername: chessCom !== undefined ? chessCom : user.chessComUsername,
-      lichessUsername: lichess !== undefined ? lichess : user.lichessUsername,
+      chessComUsername: chessCom !== undefined ? chessCom.trim() : user.chessComUsername,
+      lichessUsername: lichess !== undefined ? lichess.trim() : user.lichessUsername,
     };
     setUser(updated);
-    localStorage.setItem('opening_forge_demo_user', JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // Save to Firestore if authenticated
+    await saveUserProfile(updated);
+
+    // Trigger immediate sync on updated usernames
+    if (updated.chessComUsername || updated.lichessUsername) {
+      await autoSyncManager.autoSync(updated.chessComUsername, updated.lichessUsername, true);
+    }
+  };
+
+  const updateProfileName = async (name: string) => {
+    if (!user) return;
+    const updated: UserProfile = {
+      ...user,
+      displayName: name.trim() || 'Grandmaster Student',
+    };
+    setUser(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    await saveUserProfile(updated);
+  };
+
+  const triggerAutoSync = async (force = false) => {
+    if (!user) return { count: 0, error: null };
+    return await autoSyncManager.autoSync(user.chessComUsername, user.lichessUsername, force);
   };
 
   return (
@@ -126,6 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInAsDemo,
         logout,
         updateUserConnections,
+        updateProfileName,
+        triggerAutoSync,
       }}
     >
       {children}

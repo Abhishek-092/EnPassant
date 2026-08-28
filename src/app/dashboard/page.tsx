@@ -7,20 +7,32 @@ import { GameSyncModal } from '@/components/games/GameSyncModal';
 import { useAuth } from '@/firebase/auth';
 import { indexedDBStorage, CachedGame, UserMistakeRecord } from '@/storage/indexedDB';
 import { SessionGenerator, DailySession } from '@/training/sessionGenerator';
+import { autoSyncManager, AutoSyncStatus } from '@/services/autoSyncService';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BrutalistCard } from '@/components/ui/BrutalistCard';
 import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
-import { Flame, Award, AlertCircle, Swords, Sparkles } from 'lucide-react';
+import { Flame, Award, AlertCircle, Swords, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, triggerAutoSync } = useAuth();
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [session, setSession] = useState<DailySession | null>(null);
   const [recentGames, setRecentGames] = useState<CachedGame[]>([]);
   const [mistakes, setMistakes] = useState<UserMistakeRecord[]>([]);
+  const [syncStatus, setSyncStatus] = useState<AutoSyncStatus>(autoSyncManager.getStatus());
 
   useEffect(() => {
     loadData();
+
+    // Subscribe to autoSync background updates
+    const unsubscribe = autoSyncManager.subscribe(status => {
+      setSyncStatus(status);
+      if (!status.isSyncing) {
+        loadData();
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const loadData = async () => {
@@ -34,6 +46,15 @@ export default function DashboardPage() {
     setMistakes(mistakeList);
   };
 
+  const handleManualSync = async () => {
+    if (!user?.chessComUsername && !user?.lichessUsername) {
+      setIsSyncOpen(true);
+      return;
+    }
+    await triggerAutoSync(true);
+    loadData();
+  };
+
   return (
     <div className="flex min-h-screen bg-[#0B0D10] text-[#F0F3F8]">
       <Sidebar />
@@ -42,17 +63,36 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-2 border-[#242A35] pb-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-[#F0F3F8]">
-              COMMAND CENTER
-            </h1>
-            <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
-              STUDENT: {user?.displayName || 'GRANDMASTER STUDENT'}
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-[#F0F3F8]">
+                COMMAND CENTER
+              </h1>
+              {syncStatus.isSyncing && (
+                <BrutalistBadge variant="orange">
+                  <RefreshCw className="w-3 h-3 inline animate-spin mr-1" />
+                  AUTO-SYNCING
+                </BrutalistBadge>
+              )}
+            </div>
+            <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1 flex items-center gap-2">
+              <span>STUDENT: {user?.displayName || 'GRANDMASTER STUDENT'}</span>
+              {(user?.chessComUsername || user?.lichessUsername) && (
+                <span className="text-[#94A0B8]">
+                  • CONNECTED: {[user.chessComUsername && `CHESS.COM (${user.chessComUsername})`, user.lichessUsername && `LICHESS (${user.lichessUsername})`].filter(Boolean).join(' | ')}
+                </span>
+              )}
             </p>
           </div>
 
-          <BrutalistButton variant="primary" onClick={() => setIsSyncOpen(true)}>
-            ⚡ SYNC REAL GAMES
-          </BrutalistButton>
+          <div className="flex items-center gap-3">
+            <BrutalistButton variant="outline" onClick={() => setIsSyncOpen(true)}>
+              ⚙️ ACCOUNTS
+            </BrutalistButton>
+            <BrutalistButton variant="primary" onClick={handleManualSync} disabled={syncStatus.isSyncing}>
+              <RefreshCw className={`w-3.5 h-3.5 inline mr-1.5 ${syncStatus.isSyncing ? 'animate-spin' : ''}`} />
+              {syncStatus.isSyncing ? 'SYNCING...' : 'SYNC REAL GAMES'}
+            </BrutalistButton>
+          </div>
         </div>
 
         {/* Hero Banner Callout */}

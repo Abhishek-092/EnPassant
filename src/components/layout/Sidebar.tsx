@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,7 +13,6 @@ import {
   User,
   Settings,
   LogOut,
-  Flame,
 } from 'lucide-react';
 import { useAuth } from '../../firebase/auth';
 
@@ -36,16 +34,16 @@ export const Sidebar: React.FC = () => {
   return (
     <>
       {/* Mobile Top Navbar */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-[#111111] text-[#F2F0E6] border-b-3 border-[#111111] sticky top-0 z-40">
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#12151B] text-[#F0F3F8] border-b-2 border-[#242A35] sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#FF4D00] border-2 border-[#F2F0E6] flex items-center justify-center font-black text-black text-sm">
+          <div className="w-8 h-8 bg-[#E5B842] border border-[#C99E30] flex items-center justify-center font-black text-[#0B0D10] text-sm">
             ⚡
           </div>
-          <span className="font-black text-base tracking-widest text-[#F2F4F7]">ENPASSANT</span>
+          <span className="font-extrabold text-base tracking-widest text-[#F0F3F8]">ENPASSANT</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="px-3 py-1.5 bg-[#FF4D00] text-black border-2 border-[#F2F0E6] font-black text-xs uppercase"
+          className="px-3 py-1.5 bg-[#181C24] text-[#E5B842] border border-[#242A35] font-bold text-xs uppercase"
         >
           MENU ☰
         </button>
@@ -54,17 +52,17 @@ export const Sidebar: React.FC = () => {
       <aside
         className={`${
           mobileOpen ? 'block' : 'hidden'
-        } md:flex w-full md:w-64 bg-[#111111] text-[#F2F0E6] border-r-3 border-[#111111] flex-col justify-between p-5 h-auto md:h-screen md:sticky md:top-0 z-40`}
+        } md:flex w-full md:w-64 bg-[#12151B] text-[#F0F3F8] border-r-2 border-[#242A35] flex-col justify-between p-5 h-auto md:h-screen md:sticky md:top-0 z-40`}
       >
         <div className="flex flex-col gap-8">
           {/* Brand Header */}
-          <div className="flex items-center gap-3 border-b-3 border-[#2A2E35] pb-5">
-            <div className="w-10 h-10 bg-[#FF4D00] border-3 border-[#F2F0E6] flex items-center justify-center font-black text-black text-xl shadow-brutal-sm">
+          <div className="flex items-center gap-3 border-b-2 border-[#242A35] pb-5">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#E5B842] to-[#C99E30] border border-[#F0C450] flex items-center justify-center font-black text-[#0B0D10] text-xl shadow-brutal-sm">
               ⚡
             </div>
             <div>
-              <h1 className="font-black text-xl tracking-tighter text-[#F2F4F7]">ENPASSANT</h1>
-              <p className="text-[9px] font-mono text-[#D7FF00] tracking-widest uppercase">CHESS LABORATORY</p>
+              <h1 className="font-black text-xl tracking-tight text-[#F0F3F8]">ENPASSANT</h1>
+              <p className="text-[10px] font-mono font-bold text-[#E5B842] tracking-widest uppercase">CHESS LABORATORY</p>
             </div>
           </div>
 
@@ -77,13 +75,13 @@ export const Sidebar: React.FC = () => {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 border-2 font-bold text-xs uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3 border font-bold text-xs uppercase tracking-wider transition-all ${
                     isActive
-                      ? 'bg-[#FF4D00] text-[#111111] border-[#F2F0E6] shadow-brutal-sm translate-x-1'
-                      : 'bg-[#181818] text-[#F2F0E6] border-transparent hover:border-[#FF4D00] hover:text-[#FF4D00]'
+                      ? 'bg-[#181C24] text-[#E5B842] border-[#E5B842] shadow-brutal-sm translate-x-1'
+                      : 'bg-[#12151B] text-[#94A0B8] border-transparent hover:border-[#242A35] hover:bg-[#181C24] hover:text-[#F0F3F8]'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#E5B842]' : 'text-[#64748B]'}`} />
                   {item.name}
                 </Link>
               );
@@ -92,10 +90,10 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* User Footer & Action */}
-        <div className="flex flex-col gap-3 pt-5 border-t-3 border-[#2A2E35]">
+        <div className="flex flex-col gap-3 pt-5 border-t-2 border-[#242A35]">
           <Link
             href="/settings"
-            className="flex items-center gap-3 px-4 py-2.5 bg-[#181818] border-2 border-transparent hover:border-[#D7FF00] text-xs font-bold uppercase tracking-wider text-[#8A919C] hover:text-[#D7FF00]"
+            className="flex items-center gap-3 px-4 py-2.5 bg-[#181C24] border border-[#242A35] hover:border-[#E5B842] text-xs font-bold uppercase tracking-wider text-[#94A0B8] hover:text-[#E5B842] transition-colors"
           >
             <Settings className="w-4 h-4" />
             Settings
@@ -104,7 +102,7 @@ export const Sidebar: React.FC = () => {
           {user && (
             <button
               onClick={() => logout()}
-              className="flex items-center gap-3 px-4 py-2.5 bg-[#E32636] border-2 border-[#111111] text-xs font-black uppercase tracking-wider text-white hover:bg-red-700 transition-all shadow-brutal-sm"
+              className="flex items-center gap-3 px-4 py-2.5 bg-[#181C24] border border-[#EF4444]/40 text-xs font-bold uppercase tracking-wider text-[#F87171] hover:bg-[#EF4444]/20 transition-all cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               Logout ({user.displayName?.split(' ')[0]})
@@ -115,5 +113,3 @@ export const Sidebar: React.FC = () => {
     </>
   );
 };
-
-

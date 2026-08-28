@@ -7,8 +7,6 @@ import { classifyMoveAdaptively } from '../engine/adaptiveClassifier';
 import { generateHumanExplanation } from '../explanations/generator';
 import { indexedDBStorage, CachedGame, UserMistakeRecord } from '../storage/indexedDB';
 import { NormalizedGame } from '../providers/GameProvider';
-import { saveUserGame, saveUserMistake } from '../firebase/firestore';
-import { auth } from '../firebase/config';
 
 export interface GameAnalysisSummary {
   gameId: string;
@@ -26,7 +24,7 @@ class AnalysisOrchestrator {
    * 2. Extracts Candidate Positions
    * 3. Schedules Priority Background Stockfish Analysis
    * 4. Identifies Personal Blunders / Mistakes
-   * 5. Persists to both local IndexedDB and remote Firestore
+   * 5. Saves games, engine evaluations, and mistakes LOCALLY in IndexedDB (zero cloud cost)
    */
   public async analyzeGame(game: NormalizedGame): Promise<GameAnalysisSummary> {
     const openingDetection = detectOpeningFromMoves(game.moves);
@@ -65,7 +63,7 @@ class AnalysisOrchestrator {
 
     let mistakesFound = 0;
 
-    // Queue top priority candidate positions
+    // Queue top priority candidate positions for Stockfish evaluation
     for (const posItem of positionsToQueue.slice(0, 5)) {
       const isTheoryExit = openingDetection.firstDeviationMoveIndex === posItem.moveIndex;
 
@@ -122,19 +120,14 @@ class AnalysisOrchestrator {
               nextReviewAt: Date.now(),
             };
 
+            // Saved strictly to local browser IndexedDB
             await indexedDBStorage.saveMistake(mistakeRecord);
-
-            // Sync mistake to Firestore if user is authenticated
-            const currentUid = auth.currentUser?.uid;
-            if (currentUid) {
-              await saveUserMistake(currentUid, mistakeRecord);
-            }
           }
         },
       });
     }
 
-    // Save game record to IndexedDB
+    // Save game record to local IndexedDB (zero cloud cost)
     const cachedGame: CachedGame = {
       id: game.id,
       platform: game.platform,
@@ -153,12 +146,6 @@ class AnalysisOrchestrator {
     };
 
     await indexedDBStorage.saveGame(cachedGame);
-
-    // Sync game to Firestore if user is authenticated
-    const currentUid = auth.currentUser?.uid;
-    if (currentUid) {
-      await saveUserGame(currentUid, cachedGame);
-    }
 
     return {
       gameId: game.id,

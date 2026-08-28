@@ -2,86 +2,98 @@
 
 @layer base {
   :root {
-    --bg-paper: #F2F0E6;
-    --bg-card: #FFFFFF;
-    --text-primary: #111111;
-    --accent-orange: #FF4D00;
-    --accent-acid: #D7FF00;
-    --border-dark: #111111;
+    --bg-main: #0B0D10;
+    --bg-surface: #12151B;
+    --bg-surface-elevated: #181C24;
+    --bg-surface-subtle: #1F2430;
+    --text-primary: #F0F3F8;
+    --text-secondary: #94A0B8;
+    --text-muted: #64748B;
+    --accent-gold: #E5B842;
+    --accent-gold-dark: #C99E30;
+    --accent-amber: #F59E0B;
+    --border-primary: #242A35;
+    --border-accent: #E5B842;
   }
 
   body {
-    background-color: var(--bg-paper);
+    background-color: var(--bg-main);
     color: var(--text-primary);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     letter-spacing: -0.01em;
   }
 }
 
-/* Custom Brutalist Utility Classes */
+/* Premium Neo-Tactile Utility Classes */
 .border-brutal {
-  border: 3px solid #111111;
+  border: 2px solid #242A35;
 }
 
 .border-brutal-sm {
-  border: 2px solid #111111;
+  border: 1px solid #242A35;
+}
+
+.border-brutal-gold {
+  border: 2px solid #E5B842;
 }
 
 .shadow-brutal {
-  box-shadow: 4px 4px 0px #111111;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.6);
 }
 
 .shadow-brutal-lg {
-  box-shadow: 6px 6px 0px #111111;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.7);
 }
 
 .shadow-brutal-sm {
-  box-shadow: 2px 2px 0px #111111;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
 }
 
-.shadow-brutal-orange {
-  box-shadow: 4px 4px 0px #FF4D00;
+.shadow-brutal-gold {
+  box-shadow: 4px 4px 0px #C99E30;
 }
 
 .btn-brutal {
-  border: 3px solid #111111;
-  background-color: #F2F0E6;
-  color: #111111;
-  font-weight: 800;
+  border: 2px solid #242A35;
+  background-color: #181C24;
+  color: #F0F3F8;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 4px 4px 0px #111111;
-  transition: all 0.1s ease-in-out;
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.6);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-brutal:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px #111111;
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.6);
+  border-color: #E5B842;
+  color: #E5B842;
 }
 
 .btn-brutal:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0px 0px 0px #111111;
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.6);
 }
 
 .btn-brutal-primary {
-  border: 3px solid #111111;
-  background-color: #FF4D00;
-  color: #111111;
-  font-weight: 900;
+  border: 2px solid #E5B842;
+  background: linear-gradient(135deg, #E5B842 0%, #D4A328 100%);
+  color: #0B0D10;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 4px 4px 0px #111111;
-  transition: all 0.1s ease-in-out;
+  box-shadow: 3px 3px 0px #8C6B18;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-brutal-primary:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px #111111;
-  background-color: #E64500;
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px #8C6B18;
+  background: linear-gradient(135deg, #F0C450 0%, #E5B842 100%);
 }
 
 .btn-brutal-primary:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0px 0px 0px #111111;
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px #8C6B18;
 }

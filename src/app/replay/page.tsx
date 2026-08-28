@@ -10,7 +10,6 @@ import { MultiPvCandidate } from '@/chess/transpositionResolver';
 import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
 import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
-import { BrutalistCard } from '@/components/ui/BrutalistCard';
 import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
@@ -36,8 +35,6 @@ export default function ReplayPage() {
     setCandidates(resultCandidates);
   };
 
-
-
   const handleMove = (source: string, target: string): boolean => {
     try {
       const move = chess.move({ from: source, to: target, promotion: 'q' });
@@ -60,7 +57,6 @@ export default function ReplayPage() {
     }
   };
 
-
   const resetBoard = () => {
     const newChess = new Chess();
     setChess(newChess);
@@ -71,16 +67,16 @@ export default function ReplayPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F2F0E6] text-[#111111]">
+    <div className="flex min-h-screen bg-[#0B0D10] text-[#F0F3F8]">
       <Sidebar />
 
       <main className="flex-1 p-8 flex flex-col gap-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-3 border-[#111111] pb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-2 border-[#242A35] pb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase text-[#111111]">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-[#F0F3F8]">
               REPLAY & CORRECT
             </h1>
-            <p className="text-xs font-mono font-bold text-[#E32636] uppercase tracking-wider mt-1">
+            <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
               YOUR GAME. YOUR MISTAKE. YOUR SECOND CHANCE.
             </p>
           </div>
@@ -90,15 +86,15 @@ export default function ReplayPage() {
           </BrutalistButton>
         </div>
 
-        <div className="p-4 bg-[#E32636] text-white border-3 border-[#111111] shadow-brutal flex items-center justify-between">
+        <div className="p-4 bg-[#181C24] text-[#F0F3F8] border-2 border-[#EF4444]/60 shadow-brutal flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-6 h-6" />
+            <AlertCircle className="w-6 h-6 text-[#EF4444]" />
             <div>
-              <h3 className="font-black text-base uppercase">MISTAKE DETECTED IN YOUR GAME</h3>
-              <p className="text-xs font-mono font-bold">WHAT WOULD YOU PLAY NOW?</p>
+              <h3 className="font-extrabold text-sm uppercase text-[#F0F3F8]">MISTAKE DETECTED IN YOUR GAME</h3>
+              <p className="text-xs font-mono font-medium text-[#94A0B8]">WHAT WOULD YOU PLAY NOW?</p>
             </div>
           </div>
-          <BrutalistBadge variant="dark">BLUNDER CORRECTION</BrutalistBadge>
+          <BrutalistBadge variant="error">BLUNDER CORRECTION</BrutalistBadge>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

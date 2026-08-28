@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg-paper: #F2F0E6;
+    --bg-card: #FFFFFF;
+    --text-primary: #111111;
+    --accent-orange: #FF4D00;
+    --accent-acid: #D7FF00;
+    --border-dark: #111111;
+  }
+
+  body {
+    background-color: var(--bg-paper);
+    color: var(--text-primary);
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom Brutalist Utility Classes */
+.border-brutal {
+  border: 3px solid #111111;
+}
+
+.border-brutal-sm {
+  border: 2px solid #111111;
+}
+
+.shadow-brutal {
+  box-shadow: 4px 4px 0px #111111;
+}
+
+.shadow-brutal-lg {
+  box-shadow: 6px 6px 0px #111111;
+}
+
+.shadow-brutal-sm {
+  box-shadow: 2px 2px 0px #111111;
+}
+
+.shadow-brutal-orange {
+  box-shadow: 4px 4px 0px #FF4D00;
+}
+
+.btn-brutal {
+  border: 3px solid #111111;
+  background-color: #F2F0E6;
+  color: #111111;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 4px 4px 0px #111111;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-brutal:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #111111;
+}
+
+.btn-brutal:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px #111111;
+}
+
+.btn-brutal-primary {
+  border: 3px solid #111111;
+  background-color: #FF4D00;
+  color: #111111;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 4px 4px 0px #111111;
+  transition: all 0.1s ease-in-out;
+}
+
+.btn-brutal-primary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #111111;
+  background-color: #E64500;
+}
+
+.btn-brutal-primary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px #111111;
 }

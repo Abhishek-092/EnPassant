@@ -1,123 +1,92 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Chess } from 'chess.js';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
-import { stockfishEngine } from '@/engine/stockfishWorker';
-import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
-import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
+import { Chess } from 'chess.js';
+import { StockfishClient } from '@/engine/stockfish/stockfishClient';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
-import { SessionGenerator, DailyTrainingItem } from '@/training/sessionGenerator';
-import { Target, RotateCcw, ArrowRight, CheckCircle2 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { AdaptiveClassifier, MoveClassificationResult } from '@/engine/adaptiveClassifier';
+import { ExplanationGenerator, GeneratedExplanation } from '@/explanations/generator';
+import { BrutalistButton } from '@/components/ui/BrutalistButton';
+import { BrutalistCard } from '@/components/ui/BrutalistCard';
+import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
+import { RefreshCw } from 'lucide-react';
 
 export default function TrainPage() {
-  const [sessionItem, setSessionItem] = useState<DailyTrainingItem | null>(null);
-  const [game, setGame] = useState<Chess>(new Chess());
-  const [fen, setFen] = useState<string>('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  const [chess, setChess] = useState<Chess>(new Chess());
+  const [fen, setFen] = useState<string>(chess.fen());
   const [candidates, setCandidates] = useState<MultiPvCandidate[]>([]);
   const [classification, setClassification] = useState<MoveClassificationResult | null>(null);
   const [explanation, setExplanation] = useState<GeneratedExplanation | null>(null);
-  const [hintMessage, setHintMessage] = useState<string | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [engineStatusText, setEngineStatusText] = useState<string>('INITIALIZING ENGINE...');
+  const [isEngineVerified, setIsEngineVerified] = useState<boolean>(false);
 
   useEffect(() => {
-    initTraining();
+    const stockfish = StockfishClient.getInstance();
+    stockfish.init().then(() => {
+      setEngineStatusText('ENGINE VERIFIED (STOCKFISH 18)');
+      setIsEngineVerified(true);
+      analyzeCurrentPosition();
+    });
   }, []);
 
-  const initTraining = async () => {
-    const daily = await SessionGenerator.generateDailySession();
-    if (daily.items.length > 0) {
-      const item = daily.items[0];
-      setSessionItem(item);
-      const c = new Chess(item.fen);
-      setGame(c);
-      setFen(c.fen());
-      runEngineAnalysis(c.fen());
-    }
+  const analyzeCurrentPosition = async () => {
+    const stockfish = StockfishClient.getInstance();
+    setEngineStatusText('ANALYZING POSITION...');
+    const result = await stockfish.analyzePosition(fen, 'TRAINING');
+    setEngineStatusText('ENGINE VERIFIED (STOCKFISH 18)');
+
+    const parsedCandidates: MultiPvCandidate[] = result.lines.map((line, idx) => ({
+      rank: idx + 1,
+      move: line.pvSan[0] || 'N/A',
+      pvSan: line.pvSan,
+      evaluation: line.cp,
+    }));
+
+    setCandidates(parsedCandidates);
   };
 
-  const runEngineAnalysis = async (currentFen: string) => {
-    const resCandidates = await stockfishEngine.analyzePosition(currentFen, 3, 'TRAINING');
-    setCandidates(resCandidates);
-  };
-
-
-  const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
+  const handleMove = (source: string, target: string): boolean => {
     try {
-      const moveCopy = new Chess(game.fen());
-      const moveObj = moveCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q',
-      });
+      const move = chess.move({ from: source, to: target, promotion: 'q' });
+      if (!move) return false;
 
-      if (!moveObj) return false;
+      setFen(chess.fen());
 
-      setGame(moveCopy);
-      setFen(moveCopy.fen());
+      if (candidates.length > 0) {
+        const topEval = candidates[0].evaluation;
+        const playedLine = candidates.find(c => c.move === move.san);
+        const playedEval = playedLine ? playedLine.evaluation : topEval - 120;
 
-      // Classify user move against Stockfish MultiPV candidates
-      const classRes = classifyMoveAdaptively(
-        moveObj.san,
-        sourceSquare + targetSquare,
-        candidates,
-        game.fen()
-      );
-      setClassification(classRes);
+        const classResult = AdaptiveClassifier.classifyMove(topEval, playedEval, candidates[0].move, move.san);
+        setClassification(classResult);
 
-      const expRes = generateHumanExplanation(
-        moveObj.san,
-        candidates[0]?.move || moveObj.san,
-        candidates[1]?.move || null,
-        sessionItem?.openingName || 'the opening',
-        game.fen()
-      );
-      setExplanation(expRes);
-
-      if (classRes.category === 'BEST' || classRes.category === 'EXCELLENT') {
-        setIsCompleted(true);
-        try {
-          confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-        } catch {
-          // Fallback if canvas absent
-        }
+        const exp = ExplanationGenerator.generate(fen, move.san, candidates[0].move, classResult);
+        setExplanation(exp);
       }
 
+      analyzeCurrentPosition();
       return true;
     } catch {
       return false;
     }
   };
 
-  const handleShowHint = () => {
-    if (candidates.length > 0) {
-      const bestMove = candidates[0].move;
-      setHintMessage(`Strategic Hint: Look for piece/pawn action involving key move idea '${bestMove.charAt(0).toUpperCase()}'.`);
-    }
+  const resetBoard = () => {
+    const newChess = new Chess();
+    setChess(newChess);
+    setFen(newChess.fen());
+    setClassification(null);
+    setExplanation(null);
+    analyzeCurrentPosition();
   };
-
-  const handleReset = () => {
-    if (sessionItem) {
-      const c = new Chess(sessionItem.fen);
-      setGame(c);
-      setFen(c.fen());
-      setClassification(null);
-      setExplanation(null);
-      setHintMessage(null);
-      setIsCompleted(false);
-    }
-  };
-
-  const status = stockfishEngine.getStatus();
 
   return (
-    <div className="flex min-h-screen bg-[#0E0F11]">
+    <div className="flex min-h-screen bg-[#F2F0E6] text-[#111111]">
       <Sidebar />
 
-      <main className="flex-1 p-8 flex flex-col gap-6 max-w-7xl mx-auto">
       <main className="flex-1 p-8 flex flex-col gap-8 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-3 border-[#111111] pb-6">
           <div>
@@ -135,33 +104,41 @@ export default function TrainPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {isCompleted && (
-              <div className="w-full max-w-[540px] p-4 rounded-xl bg-[#4CAF7D]/10 border border-[#4CAF7D]/30 flex items-center justify-between text-[#4CAF7D]">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-bold text-sm">Position Solved! Best Move Found.</span>
-                </div>
-                <button
-                  onClick={initTraining}
-                  className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-[#4CAF7D] text-black font-bold text-xs"
-                >
-                  Next Position
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+          {/* Left Column: Opening Info */}
+          <div className="lg:col-span-3 flex flex-col gap-6">
+            <BrutalistCard>
+              <div className="flex flex-col gap-2 border-b-2 border-[#111111] pb-3">
+                <BrutalistBadge variant="orange">ECO B12</BrutalistBadge>
+                <h3 className="font-black text-xl uppercase">CARO-KANN DEFENSE</h3>
+                <p className="text-xs font-bold text-[#111111]">ADVANCE VARIATION</p>
               </div>
-            )}
+
+              <div className="flex flex-col gap-2 pt-3 font-mono text-xs">
+                <div className="flex justify-between">
+                  <span className="font-bold">DRILL:</span>
+                  <span className="font-black text-[#FF4D00]">04 / 12</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold">STATUS:</span>
+                  <span className="font-black text-[#19A463]">ACTIVE</span>
+                </div>
+              </div>
+            </BrutalistCard>
           </div>
 
-          {/* Engine & Coach Panel Column */}
-          <div className="lg:col-span-5">
+          {/* Center Column: Chessboard Wrapper */}
+          <div className="lg:col-span-5 flex flex-col items-center gap-4">
+            <ChessBoardWrapper fen={fen} onMove={handleMove} />
+          </div>
+
+          {/* Right Column: Coach Panel */}
+          <div className="lg:col-span-4">
             <CoachPanel
-              engineStatusText={status.statusText}
-              isEngineVerified={status.available}
+              engineStatusText={engineStatusText}
+              isEngineVerified={isEngineVerified}
               candidates={candidates}
               classification={classification}
               explanation={explanation}
-              onShowHint={handleShowHint}
-              hintMessage={hintMessage}
             />
           </div>
         </div>

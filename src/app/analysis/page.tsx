@@ -15,18 +15,20 @@ export default function AnalysisPage() {
   const [fen, setFen] = useState<string>('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   const [candidates, setCandidates] = useState<MultiPvCandidate[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
     try {
       const moveCopy = new Chess(game.fen());
       const moveObj = moveCopy.move({
         from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q',
+        to: targetSquare.slice(0, 2),
+        promotion: targetSquare.length > 2 ? targetSquare[2] : 'q',
       });
 
       if (!moveObj) return false;
 
+      setLastMove({ from: sourceSquare, to: targetSquare.slice(0, 2) });
       setGame(moveCopy);
       setFen(moveCopy.fen());
       triggerAnalysis(moveCopy.fen());
@@ -47,6 +49,7 @@ export default function AnalysisPage() {
     const c = new Chess();
     setGame(c);
     setFen(c.fen());
+    setLastMove(null);
     setCandidates([]);
   };
 
@@ -74,8 +77,9 @@ export default function AnalysisPage() {
             <BrutalistButton
               variant="primary"
               onClick={() => triggerAnalysis(fen)}
+              disabled={isAnalyzing}
             >
-              <Play className="w-3.5 h-3.5 inline mr-1" />
+              <Play className={`w-3.5 h-3.5 inline mr-1 ${isAnalyzing ? 'animate-spin' : ''}`} />
               {isAnalyzing ? 'Analyzing...' : 'Analyze Position'}
             </BrutalistButton>
             <BrutalistButton
@@ -90,7 +94,12 @@ export default function AnalysisPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 flex flex-col items-center gap-4">
-            <ChessBoardWrapper fen={fen} onMove={handleMove} orientation="white" />
+            <ChessBoardWrapper
+              fen={fen}
+              onMove={handleMove}
+              lastMove={lastMove}
+              orientation="white"
+            />
           </div>
 
           <div className="lg:col-span-5">

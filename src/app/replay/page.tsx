@@ -21,6 +21,8 @@ export default function ReplayPage() {
   const [explanation, setExplanation] = useState<GeneratedExplanation | null>(null);
   const [engineStatusText, setEngineStatusText] = useState<string>('INITIALIZING ENGINE...');
   const [isEngineVerified, setIsEngineVerified] = useState<boolean>(false);
+  const [hintMessage, setHintMessage] = useState<string | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     analyzeCurrentPosition();
@@ -37,10 +39,16 @@ export default function ReplayPage() {
 
   const handleMove = (source: string, target: string): boolean => {
     try {
-      const move = chess.move({ from: source, to: target, promotion: 'q' });
+      const move = chess.move({
+        from: source,
+        to: target.slice(0, 2),
+        promotion: target.length > 2 ? target[2] : 'q',
+      });
       if (!move) return false;
 
+      setLastMove({ from: source, to: target.slice(0, 2) });
       setFen(chess.fen());
+      setHintMessage(null);
 
       if (candidates.length > 0) {
         const classResult = classifyMoveAdaptively(move.san, `${source}${target}`, candidates, fen);
@@ -57,12 +65,22 @@ export default function ReplayPage() {
     }
   };
 
+  const handleShowHint = () => {
+    if (candidates.length > 0) {
+      setHintMessage(`Stockfish suggests playing ${candidates[0].move.toUpperCase()} to correct the tactical inaccuracy.`);
+    } else {
+      setHintMessage('Stockfish is evaluating...');
+    }
+  };
+
   const resetBoard = () => {
     const newChess = new Chess();
     setChess(newChess);
     setFen(newChess.fen());
+    setLastMove(null);
     setClassification(null);
     setExplanation(null);
+    setHintMessage(null);
     analyzeCurrentPosition();
   };
 
@@ -91,7 +109,7 @@ export default function ReplayPage() {
             <AlertCircle className="w-6 h-6 text-[#EF4444]" />
             <div>
               <h3 className="font-extrabold text-sm uppercase text-[#F0F3F8]">MISTAKE DETECTED IN YOUR GAME</h3>
-              <p className="text-xs font-mono font-medium text-[#94A0B8]">WHAT WOULD YOU PLAY NOW?</p>
+              <p className="text-xs font-mono font-medium text-[#94A0B8]">WHAT WOULD YOU PLAY NOW? CLICK OR DRAG TO MOVE.</p>
             </div>
           </div>
           <BrutalistBadge variant="error">BLUNDER CORRECTION</BrutalistBadge>
@@ -100,7 +118,12 @@ export default function ReplayPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Center Column: Chessboard Wrapper */}
           <div className="lg:col-span-7 flex flex-col items-center gap-4">
-            <ChessBoardWrapper fen={fen} onMove={handleMove} />
+            <ChessBoardWrapper
+              fen={fen}
+              onMove={handleMove}
+              lastMove={lastMove}
+              orientation="white"
+            />
           </div>
 
           {/* Right Column: Coach Panel */}
@@ -111,6 +134,8 @@ export default function ReplayPage() {
               candidates={candidates}
               classification={classification}
               explanation={explanation}
+              onShowHint={handleShowHint}
+              hintMessage={hintMessage}
             />
           </div>
         </div>

@@ -5,7 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
 import { Chess } from 'chess.js';
-import { StockfishClient } from '@/engine/stockfish/stockfishClient';
+import { stockfishEngineService } from '@/engine/stockfishWorker';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
 import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
 import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
@@ -24,29 +24,18 @@ export default function TrainPage() {
   const [isEngineVerified, setIsEngineVerified] = useState<boolean>(false);
 
   useEffect(() => {
-    const stockfish = StockfishClient.getInstance();
-    stockfish.init().then(() => {
-      setEngineStatusText('ENGINE VERIFIED (STOCKFISH 18)');
-      setIsEngineVerified(true);
-      analyzeCurrentPosition();
-    });
-  }, []);
+    analyzeCurrentPosition();
+  }, [fen]);
 
   const analyzeCurrentPosition = async () => {
-    const stockfish = StockfishClient.getInstance();
     setEngineStatusText('ANALYZING POSITION...');
-    const result = await stockfish.analyzePosition(fen, 'TRAINING');
-    setEngineStatusText('ENGINE VERIFIED (STOCKFISH 18)');
-
-    const parsedCandidates: MultiPvCandidate[] = result.lines.map((line, idx) => ({
-      rank: idx + 1,
-      move: line.pvSan[0] || 'N/A',
-      pvSan: line.pvSan,
-      evaluation: line.cp,
-    }));
-
-    setCandidates(parsedCandidates);
+    const resultCandidates = await stockfishEngineService.analyzePosition(fen, 3, 'TRAINING');
+    const status = stockfishEngineService.getStatus();
+    setEngineStatusText(status.statusText.toUpperCase());
+    setIsEngineVerified(status.available);
+    setCandidates(resultCandidates);
   };
+
 
   const handleMove = (source: string, target: string): boolean => {
     try {

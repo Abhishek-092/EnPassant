@@ -35,88 +35,85 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Top Navbar Bar */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-[#15171B] border-b border-[#2A2E35] sticky top-0 z-40">
+      {/* Mobile Top Navbar */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#111111] text-[#F2F0E6] border-b-3 border-[#111111] sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#D6B15E] to-[#B38E3F] flex items-center justify-center font-bold text-black text-sm">
+          <div className="w-7 h-7 bg-[#FF4D00] border-2 border-[#F2F0E6] flex items-center justify-center font-black text-black text-sm">
             ⚡
           </div>
-          <span className="font-extrabold text-sm text-[#F2F4F7]">EnPassant</span>
-
+          <span className="font-black text-base tracking-widest text-[#F2F4F7]">ENPASSANT</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg bg-[#1C1F24] border border-[#2A2E35] text-[#D6B15E] text-xs font-bold"
+          className="px-3 py-1.5 bg-[#FF4D00] text-black border-2 border-[#F2F0E6] font-black text-xs uppercase"
         >
-          Menu ☰
+          MENU ☰
         </button>
       </div>
 
       <aside
         className={`${
           mobileOpen ? 'block' : 'hidden'
-        } md:flex w-full md:w-64 bg-[#15171B] border-r border-[#2A2E35] flex-col justify-between p-4 h-auto md:h-screen md:sticky md:top-0 text-[#F2F4F7] z-40`}
+        } md:flex w-full md:w-64 bg-[#111111] text-[#F2F0E6] border-r-3 border-[#111111] flex-col justify-between p-5 h-auto md:h-screen md:sticky md:top-0 z-40`}
       >
-
-      <div className="flex flex-col gap-6">
-        {/* Brand Header */}
-        <div className="flex items-center gap-3 px-2 pt-2">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#D6B15E] to-[#B38E3F] flex items-center justify-center font-bold text-black text-lg shadow-lg">
-            ⚡
+        <div className="flex flex-col gap-8">
+          {/* Brand Header */}
+          <div className="flex items-center gap-3 border-b-3 border-[#2A2E35] pb-5">
+            <div className="w-10 h-10 bg-[#FF4D00] border-3 border-[#F2F0E6] flex items-center justify-center font-black text-black text-xl shadow-brutal-sm">
+              ⚡
+            </div>
+            <div>
+              <h1 className="font-black text-xl tracking-tighter text-[#F2F4F7]">ENPASSANT</h1>
+              <p className="text-[9px] font-mono text-[#D7FF00] tracking-widest uppercase">CHESS LABORATORY</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-extrabold text-base tracking-wider text-[#F2F4F7]">EnPassant</h1>
-            <p className="text-[10px] text-[#8A919C] tracking-wide">ADAPTIVE CHESS COACH</p>
-          </div>
 
+          {/* Navigation Links */}
+          <nav className="flex flex-col gap-2">
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 border-2 font-bold text-xs uppercase tracking-wider transition-all ${
+                    isActive
+                      ? 'bg-[#FF4D00] text-[#111111] border-[#F2F0E6] shadow-brutal-sm translate-x-1'
+                      : 'bg-[#181818] text-[#F2F0E6] border-transparent hover:border-[#FF4D00] hover:text-[#FF4D00]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex flex-col gap-1">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-[#1C1F24] text-[#D6B15E] border border-[#2A2E35]'
-                    : 'text-[#8A919C] hover:text-[#F2F4F7] hover:bg-[#1C1F24]/50'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#D6B15E]' : ''}`} />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* User Footer & Quick Action */}
-      <div className="flex flex-col gap-3 pt-4 border-t border-[#2A2E35]">
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[#8A919C] hover:text-[#F2F4F7] hover:bg-[#1C1F24]"
-        >
-          <Settings className="w-4 h-4" />
-          Settings
-        </Link>
-
-
-        {user && (
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-[#D95D5D] hover:bg-[#D95D5D]/10 transition-all"
+        {/* User Footer & Action */}
+        <div className="flex flex-col gap-3 pt-5 border-t-3 border-[#2A2E35]">
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 px-4 py-2.5 bg-[#181818] border-2 border-transparent hover:border-[#D7FF00] text-xs font-bold uppercase tracking-wider text-[#8A919C] hover:text-[#D7FF00]"
           >
-            <LogOut className="w-4 h-4" />
-            Logout ({user.displayName?.split(' ')[0]})
-          </button>
-        )}
-      </div>
-    </aside>
+            <Settings className="w-4 h-4" />
+            Settings
+          </Link>
+
+          {user && (
+            <button
+              onClick={() => logout()}
+              className="flex items-center gap-3 px-4 py-2.5 bg-[#E32636] border-2 border-[#111111] text-xs font-black uppercase tracking-wider text-white hover:bg-red-700 transition-all shadow-brutal-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout ({user.displayName?.split(' ')[0]})
+            </button>
+          )}
+        </div>
+      </aside>
     </>
   );
 };
+
 

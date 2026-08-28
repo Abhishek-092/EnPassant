@@ -6,8 +6,7 @@ import { GameCard } from '@/components/games/GameCard';
 import { GameSyncModal } from '@/components/games/GameSyncModal';
 import { indexedDBStorage, CachedGame } from '@/storage/indexedDB';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
-import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
-import { Swords, Search } from 'lucide-react';
+import { Swords } from 'lucide-react';
 
 export default function GamesPage() {
   const [games, setGames] = useState<CachedGame[]>([]);
@@ -34,16 +33,16 @@ export default function GamesPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#F2F0E6] text-[#111111]">
+    <div className="flex min-h-screen bg-[#0B0D10] text-[#F0F3F8]">
       <Sidebar />
 
       <main className="flex-1 p-8 flex flex-col gap-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-3 border-[#111111] pb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-2 border-[#242A35] pb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase text-[#111111]">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase text-[#F0F3F8]">
               MATCH ARCHIVE
             </h1>
-            <p className="text-xs font-mono font-bold text-[#FF4D00] uppercase tracking-wider mt-1">
+            <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
               SYNCHRONIZED GAMES FROM CHESS.COM, LICHESS, AND PGN UPLOADS
             </p>
           </div>
@@ -55,35 +54,35 @@ export default function GamesPage() {
 
         {/* Filter Controls & Search */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center bg-white border-3 border-[#111111] p-1 font-mono text-xs shadow-brutal-sm w-full md:w-auto">
+          <div className="flex items-center bg-[#12151B] border-2 border-[#242A35] p-1 font-mono text-xs shadow-brutal-sm w-full md:w-auto">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 font-bold uppercase transition-all ${
-                activeTab === 'all' ? 'bg-[#FF4D00] text-[#111111]' : 'text-[#111111] hover:bg-[#F2F0E6]'
+              className={`px-4 py-2 font-bold uppercase transition-all cursor-pointer ${
+                activeTab === 'all' ? 'bg-[#181C24] text-[#E5B842] border border-[#E5B842]' : 'text-[#94A0B8] hover:text-[#F0F3F8]'
               }`}
             >
               ALL ({games.length})
             </button>
             <button
               onClick={() => setActiveTab('chesscom')}
-              className={`px-4 py-2 font-bold uppercase transition-all ${
-                activeTab === 'chesscom' ? 'bg-[#FF4D00] text-[#111111]' : 'text-[#111111] hover:bg-[#F2F0E6]'
+              className={`px-4 py-2 font-bold uppercase transition-all cursor-pointer ${
+                activeTab === 'chesscom' ? 'bg-[#181C24] text-[#E5B842] border border-[#E5B842]' : 'text-[#94A0B8] hover:text-[#F0F3F8]'
               }`}
             >
               CHESS.COM
             </button>
             <button
               onClick={() => setActiveTab('lichess')}
-              className={`px-4 py-2 font-bold uppercase transition-all ${
-                activeTab === 'lichess' ? 'bg-[#FF4D00] text-[#111111]' : 'text-[#111111] hover:bg-[#F2F0E6]'
+              className={`px-4 py-2 font-bold uppercase transition-all cursor-pointer ${
+                activeTab === 'lichess' ? 'bg-[#181C24] text-[#E5B842] border border-[#E5B842]' : 'text-[#94A0B8] hover:text-[#F0F3F8]'
               }`}
             >
               LICHESS
             </button>
             <button
               onClick={() => setActiveTab('pgn')}
-              className={`px-4 py-2 font-bold uppercase transition-all ${
-                activeTab === 'pgn' ? 'bg-[#FF4D00] text-[#111111]' : 'text-[#111111] hover:bg-[#F2F0E6]'
+              className={`px-4 py-2 font-bold uppercase transition-all cursor-pointer ${
+                activeTab === 'pgn' ? 'bg-[#181C24] text-[#E5B842] border border-[#E5B842]' : 'text-[#94A0B8] hover:text-[#F0F3F8]'
               }`}
             >
               PGN
@@ -96,17 +95,17 @@ export default function GamesPage() {
               placeholder="SEARCH OPPONENT OR OPENING..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border-3 border-[#111111] text-xs font-bold uppercase tracking-wider text-[#111111] shadow-brutal-sm focus:outline-none"
+              className="w-full px-4 py-2.5 bg-[#12151B] border-2 border-[#242A35] text-xs font-bold uppercase tracking-wider text-[#F0F3F8] shadow-brutal-sm focus:outline-none focus:border-[#E5B842]"
             />
           </div>
         </div>
 
         {/* Games List */}
         {filteredGames.length === 0 ? (
-          <div className="p-12 text-center text-xs font-bold text-[#111111] border-3 border-dashed border-[#111111] bg-white flex flex-col items-center gap-3">
-            <Swords className="w-8 h-8 text-[#FF4D00]" />
-            <p className="font-black text-base uppercase">NO MATCHES FOUND IN THIS TAB</p>
-            <p className="text-[#111111]">CONNECT CHESS.COM OR LICHESS ACCOUNTS TO LOAD GAMES AUTOMATICALLY.</p>
+          <div className="p-12 text-center text-xs font-semibold text-[#94A0B8] border-2 border-dashed border-[#242A35] bg-[#12151B] flex flex-col items-center gap-3">
+            <Swords className="w-8 h-8 text-[#E5B842]" />
+            <p className="font-extrabold text-sm uppercase text-[#F0F3F8]">NO MATCHES FOUND IN THIS TAB</p>
+            <p className="text-[#94A0B8]">CONNECT CHESS.COM OR LICHESS ACCOUNTS TO LOAD GAMES AUTOMATICALLY.</p>
             <BrutalistButton variant="primary" onClick={() => setIsSyncOpen(true)} className="mt-2">
               CONNECT ACCOUNTS
             </BrutalistButton>
@@ -124,4 +123,3 @@ export default function GamesPage() {
     </div>
   );
 }
-

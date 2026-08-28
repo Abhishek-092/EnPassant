@@ -118,39 +118,23 @@ export default function TrainPage() {
       <Sidebar />
 
       <main className="flex-1 p-8 flex flex-col gap-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2A2E35] pb-4">
-          <div className="flex items-center gap-2">
-            <Target className="w-6 h-6 text-[#D6B15E]" />
-            <div>
-              <h1 className="text-xl font-extrabold text-[#F2F4F7]">
-                {sessionItem ? sessionItem.title : 'Adaptive Opening Training'}
-              </h1>
-              <p className="text-xs text-[#8A919C]">
-                {sessionItem ? sessionItem.prompt : 'Find the top Stockfish engine move.'}
-              </p>
-            </div>
+      <main className="flex-1 p-8 flex flex-col gap-8 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b-3 border-[#111111] pb-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase text-[#111111]">
+              TRAINING LABORATORY
+            </h1>
+            <p className="text-xs font-mono font-bold text-[#FF4D00] uppercase tracking-wider mt-1">
+              ADAPTIVE OPENING REPETITION & STOCKFISH 18 ANALYSIS
+            </p>
           </div>
 
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#15171B] border border-[#2A2E35] text-xs font-semibold text-[#8A919C] hover:text-[#F2F4F7]"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset Position
-          </button>
+          <BrutalistButton variant="outline" onClick={resetBoard}>
+            <RefreshCw className="w-4 h-4 inline mr-1" /> RESET BOARD
+          </BrutalistButton>
         </div>
 
-        {/* Main Training Split View */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Interactive Chess Board Column */}
-          <div className="lg:col-span-7 flex flex-col items-center gap-4">
-            <ChessBoardWrapper
-              fen={fen}
-              onMove={handleMove}
-              orientation={sessionItem?.userColor || 'white'}
-            />
-
             {isCompleted && (
               <div className="w-full max-w-[540px] p-4 rounded-xl bg-[#4CAF7D]/10 border border-[#4CAF7D]/30 flex items-center justify-between text-[#4CAF7D]">
                 <div className="flex items-center gap-2">

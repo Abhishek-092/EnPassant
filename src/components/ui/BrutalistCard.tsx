@@ -13,11 +13,11 @@ export const BrutalistCard: React.FC<BrutalistCardProps> = ({
   className = '',
   accent = 'none',
 }) => {
-  let accentBorder = 'border-[#111111]';
-  if (accent === 'orange') accentBorder = 'border-[#FF4D00]';
+  let accentBorder = 'border-[#242A35]';
+  if (accent === 'orange' || accent === 'acid') accentBorder = 'border-[#E5B842]';
 
   return (
-    <div className={`p-6 bg-white border-3 ${accentBorder} shadow-brutal text-[#111111] ${className}`}>
+    <div className={`p-6 bg-[#12151B] border-2 ${accentBorder} shadow-brutal text-[#F0F3F8] ${className}`}>
       {children}
     </div>
   );

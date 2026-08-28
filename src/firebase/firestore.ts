@@ -3,18 +3,13 @@ import {
   doc,
   setDoc,
   getDoc,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
   serverTimestamp,
 } from 'firebase/firestore';
 import { UserProfile } from './auth';
-import { UserMistakeRecord, CachedGame } from '../storage/indexedDB';
 
 /**
- * Save user profile to Firestore `users/{uid}`
+ * Save user profile and platform credentials to Firestore `users/{uid}`
+ * Only stores user metadata & connected usernames (Chess.com, Lichess) to minimize Firestore write costs.
  */
 export async function saveUserProfile(user: UserProfile): Promise<void> {
   try {
@@ -38,7 +33,7 @@ export async function saveUserProfile(user: UserProfile): Promise<void> {
 }
 
 /**
- * Load user profile from Firestore `users/{uid}`
+ * Load user profile & connected platform usernames from Firestore `users/{uid}`
  */
 export async function loadUserProfile(uid: string): Promise<Partial<UserProfile> | null> {
   try {
@@ -59,34 +54,4 @@ export async function loadUserProfile(uid: string): Promise<Partial<UserProfile>
     console.warn('Firestore loadUserProfile skipped:', err);
   }
   return null;
-}
-
-/**
- * Save user game record to Firestore `users/{uid}/games/{gameId}`
- */
-export async function saveUserGame(uid: string, game: CachedGame): Promise<void> {
-  try {
-    const gameRef = doc(db, 'users', uid, 'games', game.id);
-    await setDoc(gameRef, {
-      ...game,
-      syncedAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('Firestore saveUserGame skipped:', err);
-  }
-}
-
-/**
- * Save personal mistake record to Firestore `users/{uid}/mistakes/{mistakeId}`
- */
-export async function saveUserMistake(uid: string, mistake: UserMistakeRecord): Promise<void> {
-  try {
-    const mistakeRef = doc(db, 'users', uid, 'mistakes', mistake.id);
-    await setDoc(mistakeRef, {
-      ...mistake,
-      syncedAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('Firestore saveUserMistake skipped:', err);
-  }
 }

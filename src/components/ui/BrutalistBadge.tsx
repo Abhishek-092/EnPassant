@@ -11,15 +11,14 @@ export const BrutalistBadge: React.FC<BrutalistBadgeProps> = ({
   variant = 'default',
   children,
 }) => {
-  let style = 'bg-[#F2F0E6] text-[#111111] border-[#111111]';
-  if (variant === 'orange') style = 'bg-[#FF4D00] text-[#111111] border-[#111111]';
-  if (variant === 'acid') style = 'bg-[#D7FF00] text-[#111111] border-[#111111]';
-  if (variant === 'dark') style = 'bg-[#111111] text-[#F2F0E6] border-[#111111]';
-  if (variant === 'success') style = 'bg-[#19A463] text-white border-[#111111]';
-  if (variant === 'error') style = 'bg-[#E32636] text-white border-[#111111]';
+  let style = 'bg-[#181C24] text-[#94A0B8] border-[#242A35]';
+  if (variant === 'orange' || variant === 'acid') style = 'bg-[#E5B842]/15 text-[#E5B842] border-[#E5B842]/40';
+  if (variant === 'dark') style = 'bg-[#0B0D10] text-[#E5B842] border-[#242A35]';
+  if (variant === 'success') style = 'bg-[#10B981]/15 text-[#34D399] border-[#10B981]/40';
+  if (variant === 'error') style = 'bg-[#EF4444]/15 text-[#F87171] border-[#EF4444]/40';
 
   return (
-    <span className={`inline-block border-2 font-mono font-bold text-[10px] uppercase tracking-wider px-2.5 py-0.5 ${style}`}>
+    <span className={`inline-block border font-mono font-bold text-[10px] uppercase tracking-wider px-2.5 py-0.5 ${style}`}>
       {children}
     </span>
   );

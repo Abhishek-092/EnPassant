@@ -38,6 +38,30 @@ export async function saveUserProfile(user: UserProfile): Promise<void> {
 }
 
 /**
+ * Load user profile from Firestore `users/{uid}`
+ */
+export async function loadUserProfile(uid: string): Promise<Partial<UserProfile> | null> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        displayName: data.username || undefined,
+        email: data.email || undefined,
+        rating: data.rating || 1500,
+        preferredColor: data.preferredColor || 'both',
+        chessComUsername: data.chessComUsername || undefined,
+        lichessUsername: data.lichessUsername || undefined,
+      };
+    }
+  } catch (err) {
+    console.warn('Firestore loadUserProfile skipped:', err);
+  }
+  return null;
+}
+
+/**
  * Save user game record to Firestore `users/{uid}/games/{gameId}`
  */
 export async function saveUserGame(uid: string, game: CachedGame): Promise<void> {

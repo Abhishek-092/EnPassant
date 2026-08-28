@@ -5,7 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
 import { Chess } from 'chess.js';
-import { stockfishEngineService } from '@/engine/stockfishWorker';
+import { stockfishEngine } from '@/engine/stockfishWorker';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
 import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
 import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
@@ -29,12 +29,13 @@ export default function ReplayPage() {
 
   const analyzeCurrentPosition = async () => {
     setEngineStatusText('ANALYZING BLUNDER POSITION...');
-    const resultCandidates = await stockfishEngineService.analyzePosition(fen, 3, 'TRAINING');
-    const status = stockfishEngineService.getStatus();
+    const resultCandidates = await stockfishEngine.analyzePosition(fen, 3, 'TRAINING');
+    const status = stockfishEngine.getStatus();
     setEngineStatusText(status.statusText.toUpperCase());
     setIsEngineVerified(status.available);
     setCandidates(resultCandidates);
   };
+
 
 
   const handleMove = (source: string, target: string): boolean => {

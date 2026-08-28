@@ -24,20 +24,17 @@ export const ChessBoardWrapper: React.FC<ChessBoardWrapperProps> = ({
   }
 
   return (
-    <div className="relative w-full max-w-[540px] aspect-square mx-auto flex items-center justify-center p-3 bg-white border-3 border-[#111111] shadow-brutal-lg">
+    <div className="relative w-full max-w-[540px] aspect-square mx-auto flex items-center justify-center p-3 bg-[#12151B] border-2 border-[#242A35] shadow-brutal-lg">
       <Chessboard
         options={{
           position: fen,
           boardOrientation: orientation,
           onPieceDrop: handlePieceDrop,
           allowDragging: isInteractive,
-          darkSquareStyle: { backgroundColor: '#111111' },
-          lightSquareStyle: { backgroundColor: '#F2F0E6' },
+          darkSquareStyle: { backgroundColor: '#2E3846' },
+          lightSquareStyle: { backgroundColor: '#C8D3DF' },
         }}
       />
     </div>
   );
-
 };
-
-

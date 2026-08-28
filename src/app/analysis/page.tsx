@@ -7,6 +7,7 @@ import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
 import { stockfishEngine } from '@/engine/stockfishWorker';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
+import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BarChart3, Play, RotateCcw } from 'lucide-react';
 
 export default function AnalysisPage() {
@@ -42,7 +43,6 @@ export default function AnalysisPage() {
     setIsAnalyzing(false);
   };
 
-
   const handleReset = () => {
     const c = new Chess();
     setGame(c);
@@ -53,36 +53,38 @@ export default function AnalysisPage() {
   const status = stockfishEngine.getStatus();
 
   return (
-    <div className="flex min-h-screen bg-[#0E0F11]">
+    <div className="flex min-h-screen bg-[#0B0D10] text-[#F0F3F8]">
       <Sidebar />
 
       <main className="flex-1 p-8 flex flex-col gap-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between border-b border-[#2A2E35] pb-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b-2 border-[#242A35] pb-6 gap-4">
           <div className="flex items-center gap-3">
-            <BarChart3 className="w-6 h-6 text-[#D6B15E]" />
+            <BarChart3 className="w-6 h-6 text-[#E5B842]" />
             <div>
-              <h1 className="text-xl font-extrabold text-[#F2F4F7]">Interactive Analysis Board</h1>
-              <p className="text-xs text-[#8A919C]">
-                Explore variations with live Stockfish MultiPV evaluations and positional heuristics.
+              <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-[#F0F3F8]">
+                ANALYSIS BOARD
+              </h1>
+              <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
+                EXPLORE VARIATIONS WITH LIVE STOCKFISH 18 MULTIPV EVALUATIONS
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+            <BrutalistButton
+              variant="primary"
               onClick={() => triggerAnalysis(fen)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#D6B15E] hover:bg-[#b89547] text-black font-bold text-xs transition-all shadow-lg"
             >
-              <Play className="w-3.5 h-3.5" />
-              Analyze Position
-            </button>
-            <button
+              <Play className="w-3.5 h-3.5 inline mr-1" />
+              {isAnalyzing ? 'Analyzing...' : 'Analyze Position'}
+            </BrutalistButton>
+            <BrutalistButton
+              variant="outline"
               onClick={handleReset}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#15171B] border border-[#2A2E35] text-xs font-semibold text-[#8A919C] hover:text-[#F2F4F7]"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
               Reset Board
-            </button>
+            </BrutalistButton>
           </div>
         </div>
 
@@ -93,7 +95,7 @@ export default function AnalysisPage() {
 
           <div className="lg:col-span-5">
             <CoachPanel
-              engineStatusText={status.statusText}
+              engineStatusText={status.statusText.toUpperCase()}
               isEngineVerified={status.available}
               candidates={candidates}
               classification={null}

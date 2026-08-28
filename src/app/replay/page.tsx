@@ -7,8 +7,8 @@ import { CoachPanel } from '@/components/chess/CoachPanel';
 import { Chess } from 'chess.js';
 import { StockfishClient } from '@/engine/stockfish/stockfishClient';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
-import { AdaptiveClassifier, MoveClassificationResult } from '@/engine/adaptiveClassifier';
-import { ExplanationGenerator, GeneratedExplanation } from '@/explanations/generator';
+import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
+import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BrutalistCard } from '@/components/ui/BrutalistCard';
 import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
@@ -56,14 +56,10 @@ export default function ReplayPage() {
       setFen(chess.fen());
 
       if (candidates.length > 0) {
-        const topEval = candidates[0].evaluation;
-        const playedLine = candidates.find(c => c.move === move.san);
-        const playedEval = playedLine ? playedLine.evaluation : topEval - 150;
-
-        const classResult = AdaptiveClassifier.classifyMove(topEval, playedEval, candidates[0].move, move.san);
+        const classResult = classifyMoveAdaptively(move.san, `${source}${target}`, candidates, fen);
         setClassification(classResult);
 
-        const exp = ExplanationGenerator.generate(fen, move.san, candidates[0].move, classResult);
+        const exp = generateHumanExplanation(move.san, candidates[0].move, candidates[1]?.move || null, 'Blunder Replay', fen);
         setExplanation(exp);
       }
 
@@ -73,6 +69,7 @@ export default function ReplayPage() {
       return false;
     }
   };
+
 
   const resetBoard = () => {
     const newChess = new Chess();

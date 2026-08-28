@@ -12,7 +12,7 @@ import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/g
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BrutalistCard } from '@/components/ui/BrutalistCard';
 import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Lightbulb, Play } from 'lucide-react';
 
 export default function TrainPage() {
   const [chess, setChess] = useState<Chess>(new Chess());
@@ -22,6 +22,8 @@ export default function TrainPage() {
   const [explanation, setExplanation] = useState<GeneratedExplanation | null>(null);
   const [engineStatusText, setEngineStatusText] = useState<string>('INITIALIZING ENGINE...');
   const [isEngineVerified, setIsEngineVerified] = useState<boolean>(false);
+  const [hintMessage, setHintMessage] = useState<string | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     analyzeCurrentPosition();
@@ -38,10 +40,16 @@ export default function TrainPage() {
 
   const handleMove = (source: string, target: string): boolean => {
     try {
-      const move = chess.move({ from: source, to: target, promotion: 'q' });
+      const move = chess.move({
+        from: source,
+        to: target.slice(0, 2),
+        promotion: target.length > 2 ? target[2] : 'q',
+      });
       if (!move) return false;
 
+      setLastMove({ from: source, to: target.slice(0, 2) });
       setFen(chess.fen());
+      setHintMessage(null);
 
       if (candidates.length > 0) {
         const classResult = classifyMoveAdaptively(move.san, `${source}${target}`, candidates, fen);
@@ -58,12 +66,23 @@ export default function TrainPage() {
     }
   };
 
+  const handleShowHint = () => {
+    if (candidates.length > 0) {
+      const topMove = candidates[0].move;
+      setHintMessage(`Stockfish suggests examining ${topMove.toUpperCase()} to maintain initiative.`);
+    } else {
+      setHintMessage('Stockfish is evaluating candidate moves...');
+    }
+  };
+
   const resetBoard = () => {
     const newChess = new Chess();
     setChess(newChess);
     setFen(newChess.fen());
+    setLastMove(null);
     setClassification(null);
     setExplanation(null);
+    setHintMessage(null);
     analyzeCurrentPosition();
   };
 
@@ -78,7 +97,7 @@ export default function TrainPage() {
               TRAINING LABORATORY
             </h1>
             <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
-              ADAPTIVE OPENING REPETITION & STOCKFISH 18 ANALYSIS
+              CLICK OR DRAG PIECES TO PRACTICE MOVES WITH STOCKFISH 18 FEEDBACK
             </p>
           </div>
 
@@ -112,7 +131,12 @@ export default function TrainPage() {
 
           {/* Center Column: Chessboard Wrapper */}
           <div className="lg:col-span-5 flex flex-col items-center gap-4">
-            <ChessBoardWrapper fen={fen} onMove={handleMove} />
+            <ChessBoardWrapper
+              fen={fen}
+              onMove={handleMove}
+              lastMove={lastMove}
+              orientation="white"
+            />
           </div>
 
           {/* Right Column: Coach Panel */}
@@ -123,6 +147,8 @@ export default function TrainPage() {
               candidates={candidates}
               classification={classification}
               explanation={explanation}
+              onShowHint={handleShowHint}
+              hintMessage={hintMessage}
             />
           </div>
         </div>

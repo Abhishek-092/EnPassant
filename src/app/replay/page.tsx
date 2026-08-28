@@ -184,17 +184,14 @@ export default function ReplayPage() {
                     className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-[#4CAF7D] text-black font-bold text-xs"
                   >
                     Next Blunder
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            )}
+            <ChessBoardWrapper fen={fen} onMove={handleMove} />
           </div>
 
+          {/* Right Column: Coach Panel */}
           <div className="lg:col-span-5">
             <CoachPanel
-              engineStatusText={status.statusText}
-              isEngineVerified={status.available}
+              engineStatusText={engineStatusText}
+              isEngineVerified={isEngineVerified}
               candidates={candidates}
               classification={classification}
               explanation={explanation}

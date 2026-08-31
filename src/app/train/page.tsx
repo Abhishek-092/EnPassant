@@ -238,9 +238,10 @@ function TrainWorkspace() {
         }
       }
       if (!played) return;
+      const opponentMove = played;
 
-      setLastMove({ from: played.from, to: played.to });
-      setMoves(previous => [...previous, played.san]);
+      setLastMove({ from: opponentMove.from, to: opponentMove.to });
+      setMoves(previous => [...previous, opponentMove.san]);
     };
 
     playOpponentMove().finally(() => {

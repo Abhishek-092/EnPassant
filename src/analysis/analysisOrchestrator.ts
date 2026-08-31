@@ -85,6 +85,9 @@ class AnalysisOrchestrator {
         moveSan: posItem.userMoveSan,
         targetDepth: 12,
         multiPvCount: 3,
+        // Bulk history analysis runs on the cheap profile; it must never compete with the
+        // interactive board for the single engine worker.
+        profile: 'FAST',
         onComplete: async (evalResult) => {
           const classification = classifyMoveAdaptively(
             posItem.userMoveSan,

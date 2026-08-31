@@ -46,7 +46,7 @@ export interface OpeningProgressRecord {
   name: string;
   variationName?: string;
   userColor: 'white' | 'black';
-  /** 0-100 skill score driving opponent strength. */
+  /** 0-100 skill score covering how well the opening's own moves are known. */
   mastery: number;
   attempts: number;
   correct: number;
@@ -56,6 +56,23 @@ export interface OpeningProgressRecord {
   /** Transposition keys of positions already failed, so repeat errors cost more. */
   recentErrorFens: string[];
   lastTrainedAt: number;
+
+  // --- Opponent rating, per opening ---
+  /**
+   * Null until the opening is calibrated: the rating is only established once the user has
+   * demonstrated they know the line, so it measures playing strength rather than unfamiliarity.
+   */
+  botElo: number | null;
+  /** Deepest ply of the book line reached without error, gating calibration. */
+  bookDepthReached: number;
+  /** Lessons (drilled moves) completed, gating calibration. */
+  lessonsCompleted: number;
+  /** True once the user has manually chosen a rating, which suppresses promotion prompts. */
+  eloManuallySet: boolean;
+  /** Results at the current rating, used to decide when to offer a promotion. */
+  winsAtCurrentElo: number;
+  lossesAtCurrentElo: number;
+  gamesPlayed: number;
 }
 
 class IndexedDBStorage {

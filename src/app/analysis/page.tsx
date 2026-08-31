@@ -108,6 +108,9 @@ export default function AnalysisPage() {
               onMove={handleMove}
               lastMove={lastMove}
               orientation="white"
+              evaluation={evaluation}
+              mateScore={mateScore}
+              isAnalyzing={isAnalyzing}
             />
           </div>
 

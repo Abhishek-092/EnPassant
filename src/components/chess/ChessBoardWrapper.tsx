@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess, Square } from 'chess.js';
 import { EvaluationBar } from './EvaluationBar';
@@ -33,6 +33,14 @@ export const ChessBoardWrapper: React.FC<ChessBoardWrapperProps> = ({
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [promotionMove, setPromotionMove] = useState<{ from: string; to: string } | null>(null);
+
+  // The position can change from outside (opponent move, New Game, loading a drill). Any pending
+  // selection or promotion prompt refers to the old position, and leaving a promotion modal open
+  // would block input entirely.
+  useEffect(() => {
+    setSelectedSquare(null);
+    setPromotionMove(null);
+  }, [fen]);
 
   // Instantiated chess instance to calculate legal moves and check states
   const chess = useMemo(() => {

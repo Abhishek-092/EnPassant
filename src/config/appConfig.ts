@@ -12,7 +12,10 @@ export interface AppConfig {
     minimumEaseFactor: number;
   };
   sync: {
-    maxGamesPerSync: number;
+    /** Games pulled on a fresh sync. */
+    initialGamesPerSync: number;
+    /** Games pulled per "load more" page. */
+    loadMoreBatchSize: number;
     supportedPlatforms: ('chesscom' | 'lichess' | 'pgn')[];
   };
   training: {
@@ -35,7 +38,8 @@ export const APP_CONFIG: AppConfig = {
     minimumEaseFactor: 1.3,
   },
   sync: {
-    maxGamesPerSync: 15,
+    initialGamesPerSync: 50,
+    loadMoreBatchSize: 25,
     supportedPlatforms: ['chesscom', 'lichess', 'pgn'],
   },
   training: {

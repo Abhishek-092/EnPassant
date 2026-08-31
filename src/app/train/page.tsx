@@ -306,15 +306,17 @@ function TrainWorkspace() {
         return false;
       }
       if (!played) return false;
+      const userMove = played;
 
       const fenBefore = fen;
       const expectedBook = bookReply;
 
-      setLastMove({ from: played.from, to: played.to });
-      setMoves(previous => [...previous, played.san]);
+      setLastMove({ from: userMove.from, to: userMove.to });
+      setMoves(previous => [...previous, userMove.san]);
       setHintMessage(null);
 
-      void reviewUserMove(played.san, `${played.from}${played.to}`, fenBefore, expectedBook);
+      const playedUci = `${userMove.from}${userMove.to}${userMove.promotion ?? ''}`;
+      void reviewUserMove(userMove.san, playedUci, fenBefore, expectedBook);
       return true;
     },
     [fen, isUserTurn, isOpponentThinking, isGameOver, bookReply, reviewUserMove]
@@ -413,7 +415,7 @@ function TrainWorkspace() {
               <div className="flex flex-col gap-2 border-b border-[#242A35] pb-3">
                 <div className="flex items-center justify-between">
                   <BrutalistBadge variant="orange">ECO {opening.eco}</BrutalistBadge>
-                  <BrutalistBadge variant={opening.userColor === 'white' ? 'dark' : 'dark'}>
+                  <BrutalistBadge variant="dark">
                     YOU: {opening.userColor.toUpperCase()}
                   </BrutalistBadge>
                 </div>

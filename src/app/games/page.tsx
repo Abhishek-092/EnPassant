@@ -5,22 +5,52 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { GameCard } from '@/components/games/GameCard';
 import { GameSyncModal } from '@/components/games/GameSyncModal';
 import { indexedDBStorage, CachedGame } from '@/storage/indexedDB';
+import { autoSyncManager } from '@/services/autoSyncService';
+import { useAuth } from '@/firebase/auth';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
-import { Swords } from 'lucide-react';
+import { Swords, ChevronDown, RefreshCw } from 'lucide-react';
 
 export default function GamesPage() {
+  const { user } = useAuth();
   const [games, setGames] = useState<CachedGame[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'chesscom' | 'lichess' | 'pgn'>('all');
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadMoreNote, setLoadMoreNote] = useState<string | null>(null);
 
   useEffect(() => {
     loadGames();
+    setHasMore(autoSyncManager.hasMoreGames());
   }, []);
 
   const loadGames = async () => {
     const loaded = await indexedDBStorage.getGames();
-    setGames(loaded.reverse());
+    // Newest first by import time, falling back to insertion order.
+    setGames([...loaded].sort((a, b) => b.importedAt - a.importedAt));
+  };
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    setLoadMoreNote(null);
+
+    const result = await autoSyncManager.loadMoreGames(
+      user?.chessComUsername,
+      user?.lichessUsername
+    );
+
+    await loadGames();
+    setHasMore(autoSyncManager.hasMoreGames());
+    setIsLoadingMore(false);
+
+    if (result.error) {
+      setLoadMoreNote(result.error);
+    } else if (result.count === 0) {
+      setLoadMoreNote('No older games found — you have reached the start of your history.');
+    } else {
+      setLoadMoreNote(`Loaded ${result.count} older games.`);
+    }
   };
 
   const filteredGames = games.filter(g => {
@@ -31,6 +61,8 @@ export default function GamesPage() {
       g.openingName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const canLoadMore = Boolean(user?.chessComUsername || user?.lichessUsername);
 
   return (
     <div className="flex min-h-screen bg-[#0B0D10] text-[#F0F3F8]">
@@ -115,6 +147,46 @@ export default function GamesPage() {
             {filteredGames.map(game => (
               <GameCard key={game.id} game={game} />
             ))}
+
+            {/* Load older history on demand */}
+            <div className="flex flex-col items-center gap-2 pt-4">
+              {loadMoreNote && (
+                <p className="font-mono text-[11px] font-bold text-[#E5B842] uppercase tracking-wider">
+                  {loadMoreNote}
+                </p>
+              )}
+
+              <p className="font-mono text-[11px] text-[#94A0B8] uppercase tracking-wider">
+                SHOWING {filteredGames.length} OF {games.length} STORED GAMES
+              </p>
+
+              {canLoadMore && hasMore && (
+                <BrutalistButton
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="mt-1"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 inline mr-1.5 animate-spin" />
+                      LOADING OLDER GAMES...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5 inline mr-1.5" />
+                      LOAD MORE GAMES
+                    </>
+                  )}
+                </BrutalistButton>
+              )}
+
+              {canLoadMore && !hasMore && games.length > 0 && (
+                <p className="font-mono text-[10px] text-[#64748B] uppercase tracking-wider">
+                  END OF AVAILABLE HISTORY
+                </p>
+              )}
+            </div>
           </div>
         )}
       </main>

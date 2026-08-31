@@ -1,4 +1,5 @@
 import { MultiPvCandidate } from '../chess/transpositionResolver';
+import { sideToMoveFromFen, toSideToMoveCp } from './evaluationUtils';
 
 export type MoveClassificationType =
   | 'BEST'
@@ -12,8 +13,8 @@ export interface MoveClassificationResult {
   category: MoveClassificationType;
   label: string;
   evalDifference: number; // In centipawns (positive means loss)
-  userMoveEval: number;
-  bestMoveEval: number;
+  userMoveEval: number; // Moving side's perspective
+  bestMoveEval: number; // Moving side's perspective
   isTopEngineMove: boolean;
   multiPvRank: number | null;
   explanationHint: string;
@@ -24,6 +25,10 @@ export interface MoveClassificationResult {
  * Does NOT rely on rigid fixed centipawn loss thresholds alone.
  * Considers absolute evaluation scale (+5.0 vs +0.2), evaluation state transitions,
  * MultiPV candidate presence/rank, and position context.
+ *
+ * Candidate evaluations arrive in White's perspective, so everything here is first converted
+ * to the moving side's perspective. Without that, "lost 40 centipawns" inverts for Black and
+ * every non-top Black move grades as excellent.
  */
 export function classifyMoveAdaptively(
   userMoveSan: string,
@@ -44,15 +49,23 @@ export function classifyMoveAdaptively(
     };
   }
 
-  const bestCandidate = candidates[0];
-  const bestEval = bestCandidate.evaluation;
+  const sideToMove = sideToMoveFromFen(currentFen);
+  const moverEval = (candidate: MultiPvCandidate) =>
+    toSideToMoveCp(candidate.evaluation, sideToMove);
+
+  // Stockfish ranks MultiPV best-first, but derive the best score explicitly so a cached or
+  // reordered result cannot invert the maths.
+  const bestCandidate = candidates.reduce((best, candidate) =>
+    moverEval(candidate) > moverEval(best) ? candidate : best
+  );
+  const bestEval = moverEval(bestCandidate);
 
   // Find user move in MultiPV candidates
   const matchingCandidateIndex = candidates.findIndex(
     c => c.move === userMoveSan || c.uci === userMoveUci
   );
 
-  if (matchingCandidateIndex === 0) {
+  if (candidates[matchingCandidateIndex] === bestCandidate) {
     return {
       category: 'BEST',
       label: 'Best Move',
@@ -60,7 +73,7 @@ export function classifyMoveAdaptively(
       userMoveEval: bestEval,
       bestMoveEval: bestEval,
       isTopEngineMove: true,
-      multiPvRank: 1,
+      multiPvRank: bestCandidate.rank,
       explanationHint: 'Top choice recommended by Stockfish engine analysis.',
     };
   }
@@ -68,18 +81,18 @@ export function classifyMoveAdaptively(
   let userEval = 0;
   let rank: number | null = null;
 
-  if (matchingCandidateIndex > 0) {
+  if (matchingCandidateIndex >= 0) {
     const candidate = candidates[matchingCandidateIndex];
-    userEval = candidate.evaluation;
+    userEval = moverEval(candidate);
     rank = candidate.rank;
   } else {
-    // If not in top MultiPV, estimate evaluation drop based on last candidate
-    const worstCandidateEval = candidates[candidates.length - 1].evaluation;
+    // If not in top MultiPV, estimate evaluation drop beyond the weakest candidate shown
+    const worstCandidateEval = Math.min(...candidates.map(moverEval));
     userEval = worstCandidateEval - 120; // Estimated penalty beyond MultiPV window
     rank = candidates.length + 1;
   }
 
-  // Calculate centipawn evaluation loss relative to side to move
+  // Calculate centipawn evaluation loss from the moving side's perspective
   const evalLoss = bestEval - userEval;
 
   // Contextual scaling:
@@ -91,7 +104,7 @@ export function classifyMoveAdaptively(
   let category: MoveClassificationType = 'GOOD';
   let label = 'Playable Move';
 
-  if (matchingCandidateIndex === 1 && evalLoss <= 25) {
+  if (evalLoss <= 25 && rank === 2) {
     category = 'EXCELLENT';
     label = 'Excellent Move';
   } else if (evalLoss <= 20 || (isDecisivelyWinning && evalLoss <= 60)) {

@@ -3,8 +3,8 @@ import { getPositionFingerprint, PositionFingerprint } from './positionFingerpri
 export interface MultiPvCandidate {
   move: string;              // SAN format e.g. "...c5" or "c5"
   uci: string;               // UCI format e.g. "c7c5"
-  evaluation: number;        // Centipawns relative to side to move
-  mateScore?: number | null; // Mate in N moves
+  evaluation: number;        // Centipawns, White's perspective (positive = White better)
+  mateScore?: number | null; // Mate in N moves, White's perspective
   pv: string[];              // Principal variation moves
   rank: number;              // 1-indexed rank from engine
 }

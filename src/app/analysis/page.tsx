@@ -7,6 +7,7 @@ import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
 import { stockfishEngine } from '@/engine/stockfishWorker';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
+import { bestCandidateForSideToMove } from '@/engine/evaluationUtils';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BarChart3, Play, RotateCcw } from 'lucide-react';
 
@@ -16,6 +17,8 @@ export default function AnalysisPage() {
   const [candidates, setCandidates] = useState<MultiPvCandidate[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
+  const [evaluation, setEvaluation] = useState<number | null>(null);
+  const [mateScore, setMateScore] = useState<number | null>(null);
 
   const handleMove = (sourceSquare: string, targetSquare: string): boolean => {
     try {

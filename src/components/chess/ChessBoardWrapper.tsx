@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { Chess, Square } from 'chess.js';
+import { EvaluationBar } from './EvaluationBar';
 
 interface ChessBoardWrapperProps {
   fen: string;
@@ -12,6 +13,11 @@ interface ChessBoardWrapperProps {
   customArrows?: Array<{ startSquare: string; endSquare: string; color: string }>;
   isInteractive?: boolean;
   lastMove?: { from: string; to: string } | null;
+  /** Live position evaluation in centipawns, White's perspective. */
+  evaluation?: number | null;
+  mateScore?: number | null;
+  isAnalyzing?: boolean;
+  showEvaluationBar?: boolean;
 }
 
 export const ChessBoardWrapper: React.FC<ChessBoardWrapperProps> = ({
@@ -20,6 +26,10 @@ export const ChessBoardWrapper: React.FC<ChessBoardWrapperProps> = ({
   orientation = 'white',
   isInteractive = true,
   lastMove = null,
+  evaluation = null,
+  mateScore = null,
+  isAnalyzing = false,
+  showEvaluationBar = true,
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [promotionMove, setPromotionMove] = useState<{ from: string; to: string } | null>(null);
@@ -205,63 +215,75 @@ export const ChessBoardWrapper: React.FC<ChessBoardWrapperProps> = ({
     : null;
 
   return (
-    <div className="relative w-full max-w-[540px] flex flex-col items-center gap-3">
-      {/* Board Container */}
-      <div className="relative w-full aspect-square p-2 sm:p-3 bg-[#12151B] border-2 border-[#242A35] shadow-brutal-lg select-none">
-        <Chessboard
-          options={{
-            position: fen,
-            boardOrientation: orientation,
-            onPieceDrop: handlePieceDrop,
-            onSquareClick: handleSquareClick,
-            allowDragging: isInteractive && !isGameOver,
-            squareStyles: customSquareStyles,
-            darkSquareStyle: { backgroundColor: '#262F3D' },
-            lightSquareStyle: { backgroundColor: '#B8C6D4' },
-            animationDurationInMs: 150,
-          }}
-        />
-
-        {/* Game Over Banner Overlay */}
-        {isGameOver && gameOverReason && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-30">
-            <div className="p-4 bg-[#181C24] border-2 border-[#E5B842] shadow-brutal-lg max-w-xs">
-              <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-[#E5B842]">
-                GAME CONCLUSION
-              </span>
-              <h3 className="text-base font-black uppercase text-[#F0F3F8] mt-1">
-                {gameOverReason}
-              </h3>
-            </div>
-          </div>
+    <div className="relative w-full max-w-[580px] flex flex-col items-stretch gap-3">
+      {/* Evaluation bar + board share a row so the bar always matches the board height */}
+      <div className="flex items-stretch gap-3">
+        {showEvaluationBar && (
+          <EvaluationBar
+            evaluation={evaluation}
+            mateScore={mateScore}
+            orientation={orientation}
+            isAnalyzing={isAnalyzing}
+          />
         )}
 
-        {/* Promotion Selection Modal */}
-        {promotionMove && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40">
-            <div className="p-5 bg-[#181C24] border-2 border-[#E5B842] shadow-brutal-lg flex flex-col items-center gap-4">
-              <h4 className="font-black text-xs uppercase tracking-widest text-[#E5B842]">
-                SELECT PROMOTION PIECE
-              </h4>
-              <div className="flex items-center gap-3">
-                {[
-                  { label: '♕ Queen', key: 'q' as const },
-                  { label: '♖ Rook', key: 'r' as const },
-                  { label: '♗ Bishop', key: 'b' as const },
-                  { label: '♘ Knight', key: 'n' as const },
-                ].map(p => (
-                  <button
-                    key={p.key}
-                    onClick={() => handlePromotionSelect(p.key)}
-                    className="px-3 py-2 bg-[#12151B] border border-[#242A35] hover:border-[#E5B842] text-[#F0F3F8] font-bold text-xs uppercase cursor-pointer hover:bg-[#E5B842]/10 transition-colors"
-                  >
-                    {p.label}
-                  </button>
-                ))}
+        {/* Board Container */}
+        <div className="relative flex-1 aspect-square p-2 sm:p-3 bg-[#12151B] border-2 border-[#242A35] shadow-brutal-lg select-none">
+          <Chessboard
+            options={{
+              position: fen,
+              boardOrientation: orientation,
+              onPieceDrop: handlePieceDrop,
+              onSquareClick: handleSquareClick,
+              allowDragging: isInteractive && !isGameOver,
+              squareStyles: customSquareStyles,
+              darkSquareStyle: { backgroundColor: '#262F3D' },
+              lightSquareStyle: { backgroundColor: '#B8C6D4' },
+              animationDurationInMs: 150,
+            }}
+          />
+
+          {/* Game Over Banner Overlay */}
+          {isGameOver && gameOverReason && (
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-30">
+              <div className="p-4 bg-[#181C24] border-2 border-[#E5B842] shadow-brutal-lg max-w-xs">
+                <span className="font-mono text-[10px] font-extrabold uppercase tracking-widest text-[#E5B842]">
+                  GAME CONCLUSION
+                </span>
+                <h3 className="text-base font-black uppercase text-[#F0F3F8] mt-1">
+                  {gameOverReason}
+                </h3>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Promotion Selection Modal */}
+          {promotionMove && (
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-40">
+              <div className="p-5 bg-[#181C24] border-2 border-[#E5B842] shadow-brutal-lg flex flex-col items-center gap-4">
+                <h4 className="font-black text-xs uppercase tracking-widest text-[#E5B842]">
+                  SELECT PROMOTION PIECE
+                </h4>
+                <div className="flex items-center gap-3">
+                  {[
+                    { label: '♕ Queen', key: 'q' as const },
+                    { label: '♖ Rook', key: 'r' as const },
+                    { label: '♗ Bishop', key: 'b' as const },
+                    { label: '♘ Knight', key: 'n' as const },
+                  ].map(p => (
+                    <button
+                      key={p.key}
+                      onClick={() => handlePromotionSelect(p.key)}
+                      className="px-3 py-2 bg-[#12151B] border border-[#242A35] hover:border-[#E5B842] text-[#F0F3F8] font-bold text-xs uppercase cursor-pointer hover:bg-[#E5B842]/10 transition-colors"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Turn & Status Bar */}

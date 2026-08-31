@@ -1,6 +1,6 @@
 import { MultiPvResult } from '../chess/transpositionResolver';
 import { stockfishEngine } from '../engine/stockfishWorker';
-import { calculatePositionPriority } from './priorityScorer';
+import { SearchProfileName } from '../engine/stockfish/types';
 
 export interface AnalysisTask {
   id: string;
@@ -10,6 +10,8 @@ export interface AnalysisTask {
   moveSan?: string;
   targetDepth: number;
   multiPvCount: number;
+  /** Search profile for this task. Bulk game analysis uses FAST to stay out of the way. */
+  profile?: SearchProfileName;
   onComplete?: (result: MultiPvResult) => void;
   onError?: (err: any) => void;
 }
@@ -19,6 +21,21 @@ class BackgroundAnalysisQueue {
   private isProcessing = false;
   private maxConcurrent = 1; // Conservative 1 worker default to protect browser CPU
   private activeCount = 0;
+  /**
+   * Background game analysis shares the single engine worker with the training board. While an
+   * interactive session is open the queue is paused, so importing 50 games never makes the
+   * opponent feel sluggish.
+   */
+  private isPaused = false;
+
+  public pause() {
+    this.isPaused = true;
+  }
+
+  public resume() {
+    this.isPaused = false;
+    this.processNext();
+  }
 
   public enqueue(task: AnalysisTask) {
     // Avoid queuing exact duplicates
@@ -41,7 +58,12 @@ class BackgroundAnalysisQueue {
   }
 
   private async processNext() {
-    if (this.isProcessing || this.activeCount >= this.maxConcurrent || this.queue.length === 0) {
+    if (
+      this.isPaused ||
+      this.isProcessing ||
+      this.activeCount >= this.maxConcurrent ||
+      this.queue.length === 0
+    ) {
       return;
     }
 
@@ -52,11 +74,11 @@ class BackgroundAnalysisQueue {
     this.activeCount++;
 
     try {
-      const candidates = await stockfishEngine.analyzePosition(
-        task.fen,
-        task.multiPvCount,
-        'TRAINING'
-      );
+      const candidates = await stockfishEngine.analyzePosition(task.fen, {
+        multiPv: task.multiPvCount,
+        profile: task.profile ?? 'FAST',
+        depth: task.targetDepth,
+      });
 
       if (task.onComplete) {
         task.onComplete({
@@ -77,7 +99,6 @@ class BackgroundAnalysisQueue {
         });
       }
     } catch (err) {
-
       if (task.onError) {
         task.onError(err);
       }

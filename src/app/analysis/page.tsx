@@ -43,12 +43,22 @@ export default function AnalysisPage() {
 
   const triggerAnalysis = async (currentFen: string) => {
     setIsAnalyzing(true);
-    const resCandidates = await stockfishEngine.analyzePosition(currentFen, 4, 'DEEP');
+    const resCandidates = await stockfishEngine.analyzePosition(currentFen, {
+      multiPv: 4,
+      profile: 'DEEP',
+      // Paint the bar as the search deepens rather than after it finishes.
+      onProgress: partial => {
+        setMateScore(partial.mateScore);
+        setEvaluation(partial.mateScore !== null ? null : partial.evaluationCp);
+      },
+    });
     setCandidates(resCandidates);
 
     const best = bestCandidateForSideToMove(resCandidates, currentFen);
-    setEvaluation(best ? best.evaluation : null);
-    setMateScore(best?.mateScore ?? null);
+    if (best) {
+      setEvaluation(best.evaluation);
+      setMateScore(best.mateScore ?? null);
+    }
     setIsAnalyzing(false);
   };
 

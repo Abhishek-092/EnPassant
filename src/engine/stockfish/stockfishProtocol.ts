@@ -10,10 +10,15 @@ export function mateToCentipawns(mateInMoves: number): number {
   return mateInMoves >= 0 ? 10000 - mateInMoves * 10 : -10000 - mateInMoves * 10;
 }
 
-export function parseUciInfoLine(
-  line: string,
-  fen: string
-): Partial<EngineLine> | null {
+/**
+ * Parses a UCI `info` line into raw engine data.
+ *
+ * Deliberately does NOT convert the principal variation to SAN. A depth-16 MultiPV-3 search emits
+ * well over a hundred info lines, and replaying every PV through chess.js on each one costs more
+ * main-thread time than the search itself. SAN conversion happens once, at completion, via
+ * `attachSanToLine`.
+ */
+export function parseUciInfoLine(line: string, fen: string): Partial<EngineLine> | null {
   if (!line.startsWith('info') || !line.includes('pv')) {
     return null;
   }
@@ -71,37 +76,48 @@ export function parseUciInfoLine(
     value: evalValue,
   };
 
-  const moveUci = pvTokens[0];
-  const pvSan: string[] = [];
-
-  // Parse PV tokens into SAN moves using chess.js
-  try {
-    const chess = new Chess(fen);
-    for (const uciMove of pvTokens) {
-      const from = uciMove.substring(0, 2);
-      const to = uciMove.substring(2, 4);
-      const promotion = uciMove.length > 4 ? uciMove.substring(4, 5) : undefined;
-      const res = chess.move({ from, to, promotion });
-      if (res) {
-        pvSan.push(res.san);
-      } else {
-        break;
-      }
-    }
-  } catch {
-    // If parsing fails, fall back to UCI string
-  }
-
   return {
     rank,
-    moveUci,
-    moveSan: pvSan[0] || moveUci,
+    moveUci: pvTokens[0],
+    moveSan: undefined,
     evaluation,
     principalVariationUci: pvTokens,
-    principalVariationSan: pvSan,
+    principalVariationSan: undefined,
     depth,
     selDepth,
     nodes,
     timeMs,
+  };
+}
+
+/**
+ * Converts a line's UCI principal variation into SAN. Called once per line when a search
+ * completes, not per info line.
+ *
+ * `maxPlies` bounds the work: the coach shows only the first few moves of a line, so replaying a
+ * 30-ply PV is wasted effort.
+ */
+export function attachSanToLine(line: EngineLine, fen: string, maxPlies = 8): EngineLine {
+  const pvSan: string[] = [];
+
+  try {
+    const chess = new Chess(fen);
+    for (const uciMove of line.principalVariationUci.slice(0, maxPlies)) {
+      const result = chess.move({
+        from: uciMove.substring(0, 2),
+        to: uciMove.substring(2, 4),
+        promotion: uciMove.length > 4 ? uciMove.substring(4, 5) : undefined,
+      });
+      if (!result) break;
+      pvSan.push(result.san);
+    }
+  } catch {
+    // Fall back to UCI notation if the line cannot be replayed.
+  }
+
+  return {
+    ...line,
+    moveSan: pvSan[0] || line.moveUci,
+    principalVariationSan: pvSan.length > 0 ? pvSan : line.principalVariationUci,
   };
 }

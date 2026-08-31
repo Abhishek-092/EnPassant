@@ -45,6 +45,10 @@ export default function AnalysisPage() {
     setIsAnalyzing(true);
     const resCandidates = await stockfishEngine.analyzePosition(currentFen, 4, 'DEEP');
     setCandidates(resCandidates);
+
+    const best = bestCandidateForSideToMove(resCandidates, currentFen);
+    setEvaluation(best ? best.evaluation : null);
+    setMateScore(best?.mateScore ?? null);
     setIsAnalyzing(false);
   };
 
@@ -54,6 +58,8 @@ export default function AnalysisPage() {
     setFen(c.fen());
     setLastMove(null);
     setCandidates([]);
+    setEvaluation(null);
+    setMateScore(null);
   };
 
   const status = stockfishEngine.getStatus();

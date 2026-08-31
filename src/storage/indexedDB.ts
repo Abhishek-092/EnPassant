@@ -40,6 +40,24 @@ export interface UserMistakeRecord {
   nextReviewAt: number;
 }
 
+export interface OpeningProgressRecord {
+  openingId: string;
+  eco: string;
+  name: string;
+  variationName?: string;
+  userColor: 'white' | 'black';
+  /** 0-100 skill score driving opponent strength. */
+  mastery: number;
+  attempts: number;
+  correct: number;
+  correctStreak: number;
+  bestStreak: number;
+  hintsUsed: number;
+  /** Transposition keys of positions already failed, so repeat errors cost more. */
+  recentErrorFens: string[];
+  lastTrainedAt: number;
+}
+
 class IndexedDBStorage {
   private dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -138,6 +156,35 @@ class IndexedDBStorage {
       await db.put(STORE_MISTAKES, mistake);
     } catch (e) {
       console.warn('Failed to save mistake to IndexedDB:', e);
+    }
+  }
+
+  // --- Opening Progress & Mastery ---
+  public async getProgress(openingId: string): Promise<OpeningProgressRecord | null> {
+    try {
+      const db = await this.getDB();
+      const record = await db.get(STORE_PROGRESS, openingId);
+      return record ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  public async getAllProgress(): Promise<OpeningProgressRecord[]> {
+    try {
+      const db = await this.getDB();
+      return await db.getAll(STORE_PROGRESS);
+    } catch {
+      return [];
+    }
+  }
+
+  public async saveProgress(progress: OpeningProgressRecord): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.put(STORE_PROGRESS, progress);
+    } catch (e) {
+      console.warn('Failed to save opening progress to IndexedDB:', e);
     }
   }
 }

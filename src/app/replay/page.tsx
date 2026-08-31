@@ -35,15 +35,24 @@ export default function ReplayPage() {
   const analyzeCurrentPosition = async () => {
     setEngineStatusText('ANALYZING BLUNDER POSITION...');
     setIsAnalyzing(true);
-    const resultCandidates = await stockfishEngine.analyzePosition(fen, 3, 'TRAINING');
+    const resultCandidates = await stockfishEngine.analyzePosition(fen, {
+      multiPv: 3,
+      profile: 'TRAINING',
+      onProgress: partial => {
+        setMateScore(partial.mateScore);
+        setEvaluation(partial.mateScore !== null ? null : partial.evaluationCp);
+      },
+    });
     const status = stockfishEngine.getStatus();
     setEngineStatusText(status.statusText.toUpperCase());
     setIsEngineVerified(status.available);
     setCandidates(resultCandidates);
 
     const best = bestCandidateForSideToMove(resultCandidates, fen);
-    setEvaluation(best ? best.evaluation : null);
-    setMateScore(best?.mateScore ?? null);
+    if (best) {
+      setEvaluation(best.evaluation);
+      setMateScore(best.mateScore ?? null);
+    }
     setIsAnalyzing(false);
   };
 

@@ -7,6 +7,7 @@ import { CoachPanel } from '@/components/chess/CoachPanel';
 import { Chess } from 'chess.js';
 import { stockfishEngine } from '@/engine/stockfishWorker';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
+import { bestCandidateForSideToMove } from '@/engine/evaluationUtils';
 import { classifyMoveAdaptively, MoveClassificationResult } from '@/engine/adaptiveClassifier';
 import { generateHumanExplanation, GeneratedExplanation } from '@/explanations/generator';
 import { BrutalistButton } from '@/components/ui/BrutalistButton';
@@ -23,6 +24,9 @@ export default function ReplayPage() {
   const [isEngineVerified, setIsEngineVerified] = useState<boolean>(false);
   const [hintMessage, setHintMessage] = useState<string | null>(null);
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
+  const [evaluation, setEvaluation] = useState<number | null>(null);
+  const [mateScore, setMateScore] = useState<number | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
   useEffect(() => {
     analyzeCurrentPosition();
@@ -30,11 +34,17 @@ export default function ReplayPage() {
 
   const analyzeCurrentPosition = async () => {
     setEngineStatusText('ANALYZING BLUNDER POSITION...');
+    setIsAnalyzing(true);
     const resultCandidates = await stockfishEngine.analyzePosition(fen, 3, 'TRAINING');
     const status = stockfishEngine.getStatus();
     setEngineStatusText(status.statusText.toUpperCase());
     setIsEngineVerified(status.available);
     setCandidates(resultCandidates);
+
+    const best = bestCandidateForSideToMove(resultCandidates, fen);
+    setEvaluation(best ? best.evaluation : null);
+    setMateScore(best?.mateScore ?? null);
+    setIsAnalyzing(false);
   };
 
   const handleMove = (source: string, target: string): boolean => {
@@ -123,6 +133,9 @@ export default function ReplayPage() {
               onMove={handleMove}
               lastMove={lastMove}
               orientation="white"
+              evaluation={evaluation}
+              mateScore={mateScore}
+              isAnalyzing={isAnalyzing}
             />
           </div>
 

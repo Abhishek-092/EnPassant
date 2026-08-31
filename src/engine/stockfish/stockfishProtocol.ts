@@ -1,6 +1,15 @@
 import { Chess } from 'chess.js';
 import { EngineLine, EngineEvaluation } from './types';
 
+/**
+ * Projects a mate score onto the centipawn scale so evaluations stay sortable and the
+ * evaluation bar stays saturated. Shorter mates rank above longer ones, and the sign is
+ * preserved: mate in 3 for White -> +9970, mate in 3 for Black -> -9970.
+ */
+export function mateToCentipawns(mateInMoves: number): number {
+  return mateInMoves >= 0 ? 10000 - mateInMoves * 10 : -10000 - mateInMoves * 10;
+}
+
 export function parseUciInfoLine(
   line: string,
   fen: string

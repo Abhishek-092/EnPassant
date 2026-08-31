@@ -7,6 +7,11 @@ export function getDeviceHardwareConcurrency(): number {
   return 2; // Safe default
 }
 
+/**
+ * Every profile carries a wall-clock ceiling alongside its depth target. Depth alone makes search
+ * time unpredictable — the same depth can take 80ms in a quiet position and 4 seconds in a sharp
+ * one — and an interactive board cannot afford that variance.
+ */
 export function getSearchProfileConfiguration(
   profile: SearchProfileName,
   customMultiPv?: number
@@ -18,34 +23,42 @@ export function getSearchProfileConfiguration(
     case 'FAST':
       return {
         searchMode: 'FAST',
-        depth: 12,
+        depth: 10,
+        movetime: 200,
         multiPv: customMultiPv || 1,
         threads: 1,
         hash: 16,
+        skillLevel: 20,
       };
     case 'TRAINING':
       return {
         searchMode: 'TRAINING',
-        depth: 16,
+        depth: 14,
+        movetime: 700,
         multiPv: customMultiPv || 3,
         threads: safeThreads,
         hash: 32,
+        skillLevel: 20,
       };
     case 'DEEP':
       return {
         searchMode: 'DEEP',
-        depth: 20,
+        depth: 18,
+        movetime: 2500,
         multiPv: customMultiPv || 3,
         threads: safeThreads,
         hash: 64,
+        skillLevel: 20,
       };
     case 'MAXIMUM':
       return {
         searchMode: 'MAXIMUM',
-        depth: 24,
+        depth: 22,
+        movetime: 6000,
         multiPv: customMultiPv || 3,
         threads: safeThreads,
         hash: 128,
+        skillLevel: 20,
       };
   }
 }

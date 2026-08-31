@@ -6,24 +6,25 @@ import { Chess, Move } from 'chess.js';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
+import { OpponentControlPanel } from '@/components/training/OpponentControlPanel';
 import { stockfishEngine } from '@/engine/stockfishWorker';
+import { analysisQueue } from '@/analysis/analysisQueue';
 import { MultiPvCandidate } from '@/chess/transpositionResolver';
 import { bestCandidateForSideToMove } from '@/engine/evaluationUtils';
-import {
-  getBookReply,
-  getNextOpponentLevel,
-  getOpponentLevel,
-  OPPONENT_LEVELS,
-  selectOpponentMove,
-} from '@/engine/opponentEngine';
+import { getBookReply, selectOpponentMove } from '@/engine/opponentEngine';
+import { engineLevelForPosition, MIN_ELO, PhaseAdjustedLevel } from '@/engine/eloLevels';
 import { buildMoveReview, MoveReview } from '@/training/moveReview';
 import {
-  attemptsUntilUnlocked,
-  createSeedProgress,
-  effectiveMastery,
+  applyCalibration,
+  EloOffer,
+  GameOutcome,
   gradeFromClassification,
+  isCalibrated,
+  isReadyForCalibration,
   loadMastery,
   recordAttempt,
+  recordGameResult,
+  setBotElo,
 } from '@/training/masteryStore';
 import {
   listTrainingOpenings,
@@ -35,9 +36,6 @@ import { BrutalistButton } from '@/components/ui/BrutalistButton';
 import { BrutalistCard } from '@/components/ui/BrutalistCard';
 import { BrutalistBadge } from '@/components/ui/BrutalistBadge';
 import { RefreshCw, Target, TrendingUp, BookOpen } from 'lucide-react';
-
-/** Pause before the opponent replies, so its move is visibly a response rather than instant. */
-const OPPONENT_MOVE_DELAY_MS = 320;
 
 function TrainWorkspace() {
   const searchParams = useSearchParams();
@@ -63,19 +61,29 @@ function TrainWorkspace() {
   const [hintMessage, setHintMessage] = useState<string | null>(null);
   const [hintUsedForFen, setHintUsedForFen] = useState<string | null>(null);
   const [progress, setProgress] = useState<OpeningProgressRecord | null>(null);
+  const [eloOffer, setEloOffer] = useState<EloOffer | null>(null);
   const [engineStatusText, setEngineStatusText] = useState('INITIALIZING ENGINE...');
   const [isEngineVerified, setIsEngineVerified] = useState(false);
 
   const openingRef = useRef(opening);
   openingRef.current = opening;
 
-  // Mastery is written from an async callback, so the latest record is tracked in a ref rather
+  // Mastery is written from async callbacks, so the latest record is tracked in a ref rather
   // than read inside a state updater (updaters are re-invoked in StrictMode and would
   // double-count every drilled move).
   const progressRef = useRef<OpeningProgressRecord | null>(null);
 
-  // Guards against the opponent playing twice from the same position if the effect re-runs.
+  /**
+   * Incremented on every reset and opening switch. Async work captures the value it started
+   * under and abandons itself if the generation has moved on. Crucially, the "opponent is
+   * thinking" flag is cleared from a `finally` that runs even when the work is abandoned —
+   * leaving it set is what previously froze the board after New Game.
+   */
+  const generationRef = useRef(0);
   const opponentMovedFromRef = useRef<string | null>(null);
+  const resultRecordedRef = useRef(false);
+  /** Latest position on the board, so a search that resolves late cannot overwrite the bar. */
+  const fenRef = useRef('');
 
   const game = useMemo(() => {
     const chess = new Chess();
@@ -90,25 +98,63 @@ function TrainWorkspace() {
   }, [moves]);
 
   const fen = game.fen();
+  fenRef.current = fen;
   const history = useMemo(() => game.history(), [game]);
   const isGameOver = game.isGameOver();
 
   const userTurn = opening.userColor === 'white' ? 'w' : 'b';
   const isUserTurn = game.turn() === userTurn;
 
-  const level = useMemo(
-    () => getOpponentLevel(progress ? effectiveMastery(progress) : 0),
-    [progress]
+  const botElo = progress?.botElo ?? MIN_ELO;
+  const activeLevel: PhaseAdjustedLevel | null = useMemo(
+    () => (progress ? engineLevelForPosition(botElo, fen) : null),
+    [progress, botElo, fen]
   );
-  const nextLevel = useMemo(() => getNextOpponentLevel(level), [level]);
-  const pendingUnlock = progress ? attemptsUntilUnlocked(progress) : 0;
 
   const bookReply = useMemo(
     () => getBookReply(opening.bookMoves, history),
     [opening.bookMoves, history]
   );
 
-  // --- Opening selection from URL, and on manual switch ---
+  const applyEvaluationFrom = useCallback((positionFen: string, cands: MultiPvCandidate[]) => {
+    const best = bestCandidateForSideToMove(cands, positionFen);
+    if (!best) return;
+    setEvaluation(best.evaluation);
+    setMateScore(best.mateScore ?? null);
+  }, []);
+
+  /** Streamed partial evaluations arrive in White's perspective already. */
+  const applyProgressEvaluation = useCallback(
+    (partial: { evaluationCp: number; mateScore: number | null }) => {
+      setMateScore(partial.mateScore);
+      setEvaluation(partial.mateScore !== null ? null : partial.evaluationCp);
+    },
+    []
+  );
+
+  const resetBoardState = useCallback(() => {
+    generationRef.current += 1;
+    opponentMovedFromRef.current = null;
+    resultRecordedRef.current = false;
+
+    stockfishEngine.cancelActiveAnalysis();
+
+    setMoves([]);
+    setLastMove(null);
+    setCandidates([]);
+    setAnalyzedFen(null);
+    setEvaluation(null);
+    setMateScore(null);
+    setMoveReview(null);
+    setHintMessage(null);
+    setHintUsedForFen(null);
+    setEloOffer(null);
+    // Always clear the in-flight flags, or the board stays locked after a reset.
+    setIsAnalyzing(false);
+    setIsOpponentThinking(false);
+  }, []);
+
+  // --- Opening selection from URL ---
   useEffect(() => {
     const resolved = resolveTrainingOpening({
       openingId: searchParams.get('openingId'),
@@ -116,6 +162,13 @@ function TrainWorkspace() {
     });
     setOpening(current => (current.id === resolved.id ? current : resolved));
   }, [searchParams]);
+
+  // Background game analysis shares the one engine worker. Hold it while training so the
+  // opponent stays responsive, and release it on the way out.
+  useEffect(() => {
+    analysisQueue.pause();
+    return () => analysisQueue.resume();
+  }, []);
 
   // --- Mastery record for the active opening ---
   useEffect(() => {
@@ -127,9 +180,6 @@ function TrainWorkspace() {
       variationName: opening.variationName,
       userColor: opening.userColor,
     };
-    const seeded = createSeedProgress(seed);
-    progressRef.current = seeded;
-    setProgress(seeded);
 
     loadMastery(seed).then(record => {
       if (cancelled) return;
@@ -142,26 +192,45 @@ function TrainWorkspace() {
     };
   }, [opening]);
 
-  const applyEvaluationFrom = useCallback((positionFen: string, cands: MultiPvCandidate[]) => {
-    const best = bestCandidateForSideToMove(cands, positionFen);
-    setEvaluation(best ? best.evaluation : null);
-    setMateScore(best?.mateScore ?? null);
-  }, []);
+  // --- Game result, recorded once per finished game ---
+  useEffect(() => {
+    if (!isGameOver || resultRecordedRef.current) return;
+    const record = progressRef.current;
+    if (!record || !isCalibrated(record)) return;
+
+    resultRecordedRef.current = true;
+
+    let outcome: GameOutcome = 'DRAW';
+    if (game.isCheckmate()) {
+      // Checkmate: whoever is to move has been mated.
+      outcome = game.turn() === userTurn ? 'LOSS' : 'WIN';
+    }
+
+    recordGameResult(record, outcome).then(({ record: updated, offer }) => {
+      progressRef.current = updated;
+      setProgress(updated);
+      setEloOffer(offer);
+    });
+  }, [isGameOver, game, userTurn]);
 
   /**
    * One search per position. On the user's turn it feeds the evaluation bar and the candidate
    * list they are about to be graded against; on the opponent's turn the opponent's own search
-   * feeds the bar, so the evaluation still updates after every single move without analyzing
-   * the same position twice.
+   * feeds the bar, so the evaluation updates after every move without analyzing twice.
    */
   useEffect(() => {
-    let cancelled = false;
-
     if (isGameOver) {
+      // A search may have been in flight when the game ended; clear the in-flight flags so the
+      // board and evaluation bar settle instead of pulsing indefinitely.
       setIsAnalyzing(false);
       setIsOpponentThinking(false);
       return;
     }
+
+    const generation = generationRef.current;
+    const isCurrent = () => generationRef.current === generation;
+    /** Evaluation writes must also still be about the position on the board. */
+    const isCurrentPosition = () => isCurrent() && fenRef.current === fen;
 
     const refreshEngineStatus = () => {
       const status = stockfishEngine.getStatus();
@@ -171,18 +240,29 @@ function TrainWorkspace() {
 
     if (isUserTurn) {
       setIsAnalyzing(true);
-      stockfishEngine.analyzePosition(fen, 3, 'TRAINING').then(result => {
-        if (cancelled) return;
-        setCandidates(result);
-        setAnalyzedFen(fen);
-        applyEvaluationFrom(fen, result);
-        setIsAnalyzing(false);
-        refreshEngineStatus();
-      });
+      stockfishEngine
+        .analyzePosition(fen, {
+          multiPv: 3,
+          profile: 'TRAINING',
+          onProgress: partial => {
+            if (isCurrentPosition()) applyProgressEvaluation(partial);
+          },
+        })
+        .then(result => {
+          if (!isCurrent()) return;
+          // Candidates are keyed by the position they describe, so they are still useful for
+          // grading a move that has already been played.
+          setCandidates(result);
+          setAnalyzedFen(fen);
+          if (isCurrentPosition()) applyEvaluationFrom(fen, result);
+          refreshEngineStatus();
+        })
+        .finally(() => {
+          // Runs even when abandoned, so the board never stays locked.
+          if (isCurrentPosition()) setIsAnalyzing(false);
+        });
 
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
     // --- Opponent's turn ---
@@ -198,24 +278,26 @@ function TrainWorkspace() {
       let chosenUci: string | null = null;
 
       if (activeBook) {
-        // Still in theory: stay in book so the trained position actually arises, and take a
-        // cheap evaluation purely to keep the bar live.
+        // Still in theory: play the book move immediately and evaluate in the background, so
+        // theory moves appear instantly rather than waiting on a search.
         chosenSan = activeBook;
-        const evalOnly = await stockfishEngine.analyzePosition(fen, 1, 'FAST');
-        if (cancelled) return;
-        applyEvaluationFrom(fen, evalOnly);
+        void stockfishEngine
+          .analyzePosition(fen, { multiPv: 1, profile: 'FAST' })
+          .then(result => {
+            if (isCurrentPosition()) applyEvaluationFrom(fen, result);
+          });
       } else {
-        const pick = await selectOpponentMove(fen, level);
-        if (cancelled) return;
-        if (!pick) return;
+        const pick = await selectOpponentMove(fen, botElo, p => {
+          if (isCurrentPosition()) applyProgressEvaluation(p);
+        });
+        if (!isCurrent() || !pick) return;
         chosenSan = pick.san;
         chosenUci = pick.uci;
-        applyEvaluationFrom(fen, pick.candidates);
+        if (isCurrentPosition()) applyEvaluationFrom(fen, pick.candidates);
       }
 
       refreshEngineStatus();
-      await new Promise(resolve => setTimeout(resolve, OPPONENT_MOVE_DELAY_MS));
-      if (cancelled || !chosenSan) return;
+      if (!isCurrent() || !chosenSan) return;
 
       // Resolve the chosen move against the board: SAN first, UCI as a fallback for the case
       // where the engine's SAN conversion did not survive.
@@ -245,22 +327,35 @@ function TrainWorkspace() {
     };
 
     playOpponentMove().finally(() => {
-      if (!cancelled) setIsOpponentThinking(false);
+      if (isCurrent()) setIsOpponentThinking(false);
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fen, isUserTurn, isGameOver, level, history, applyEvaluationFrom]);
+  }, [
+    fen,
+    isUserTurn,
+    isGameOver,
+    botElo,
+    history,
+    applyEvaluationFrom,
+    applyProgressEvaluation,
+  ]);
 
   /** Grades the move just played and records it against opening mastery. */
   const reviewUserMove = useCallback(
-    async (playedSan: string, playedUci: string, fenBefore: string, expectedBook: string | null) => {
+    async (
+      playedSan: string,
+      playedUci: string,
+      fenBefore: string,
+      expectedBook: string | null,
+      plyIndex: number
+    ) => {
       // Prefer the candidates already computed for this position; otherwise fetch them, so a
       // fast mover never loses their feedback.
       let reviewCandidates = analyzedFen === fenBefore ? candidates : [];
       if (reviewCandidates.length === 0) {
-        reviewCandidates = await stockfishEngine.analyzePosition(fenBefore, 3, 'TRAINING');
+        reviewCandidates = await stockfishEngine.analyzePosition(fenBefore, {
+          multiPv: 3,
+          profile: 'TRAINING',
+        });
       }
 
       const review = buildMoveReview({
@@ -276,16 +371,26 @@ function TrainWorkspace() {
       setMoveReview(review);
 
       const usedHint = hintUsedForFen === fenBefore;
-      const grade = review.followedBook
-        ? 5
-        : gradeFromClassification(review.category, usedHint);
+      const grade = review.followedBook ? 5 : gradeFromClassification(review.category, usedHint);
 
       const current = progressRef.current;
-      if (current) {
-        const updated = await recordAttempt(current, { grade, fenBefore, usedHint });
-        progressRef.current = updated;
-        setProgress(updated);
+      if (!current) return;
+
+      let updated = await recordAttempt(current, {
+        grade,
+        fenBefore,
+        usedHint,
+        wasBookMove: review.followedBook,
+        plyIndex,
+      });
+
+      // Establish the opponent's rating the moment the lesson phase is cleared.
+      if (!isCalibrated(updated) && isReadyForCalibration(updated)) {
+        updated = await applyCalibration(updated);
       }
+
+      progressRef.current = updated;
+      setProgress(updated);
     },
     [analyzedFen, candidates, hintUsedForFen]
   );
@@ -310,16 +415,17 @@ function TrainWorkspace() {
 
       const fenBefore = fen;
       const expectedBook = bookReply;
+      const plyIndex = history.length;
 
       setLastMove({ from: userMove.from, to: userMove.to });
       setMoves(previous => [...previous, userMove.san]);
       setHintMessage(null);
 
       const playedUci = `${userMove.from}${userMove.to}${userMove.promotion ?? ''}`;
-      void reviewUserMove(userMove.san, playedUci, fenBefore, expectedBook);
+      void reviewUserMove(userMove.san, playedUci, fenBefore, expectedBook, plyIndex);
       return true;
     },
-    [fen, isUserTurn, isOpponentThinking, isGameOver, bookReply, reviewUserMove]
+    [fen, isUserTurn, isOpponentThinking, isGameOver, bookReply, history.length, reviewUserMove]
   );
 
   const handleShowHint = useCallback(() => {
@@ -346,27 +452,32 @@ function TrainWorkspace() {
     }
   }, [bookReply, candidates, fen, opening]);
 
-  const resetGame = useCallback(() => {
-    opponentMovedFromRef.current = null;
-    setMoves([]);
-    setLastMove(null);
-    setCandidates([]);
-    setAnalyzedFen(null);
-    setEvaluation(null);
-    setMateScore(null);
-    setMoveReview(null);
-    setHintMessage(null);
-    setHintUsedForFen(null);
-  }, []);
-
   const switchOpening = useCallback(
     (openingId: string) => {
-      const resolved = resolveTrainingOpening({ openingId });
-      setOpening(resolved);
-      resetGame();
+      setOpening(resolveTrainingOpening({ openingId }));
+      resetBoardState();
     },
-    [resetGame]
+    [resetBoardState]
   );
+
+  const handleSetElo = useCallback(async (elo: number) => {
+    const current = progressRef.current;
+    if (!current || !elo) return;
+    const updated = await setBotElo(current, elo, true);
+    progressRef.current = updated;
+    setProgress(updated);
+    setEloOffer(null);
+  }, []);
+
+  const handleAcceptOffer = useCallback(async () => {
+    const current = progressRef.current;
+    if (!current || !eloOffer) return;
+    // Accepting a suggested change is not a manual override, so future offers keep coming.
+    const updated = await setBotElo(current, eloOffer.toElo, false);
+    progressRef.current = updated;
+    setProgress(updated);
+    setEloOffer(null);
+  }, [eloOffer]);
 
   const masteryPct = progress ? Math.round(progress.mastery) : 0;
   const accuracy =
@@ -385,7 +496,10 @@ function TrainWorkspace() {
               TRAINING LABORATORY
             </h1>
             <p className="text-xs font-mono font-bold text-[#E5B842] uppercase tracking-wider mt-1">
-              YOU PLAY {opening.userColor.toUpperCase()} · OPPONENT ADAPTS TO YOUR MASTERY
+              YOU PLAY {opening.userColor.toUpperCase()} ·{' '}
+              {progress && isCalibrated(progress)
+                ? `OPPONENT RATED ${progress.botElo}`
+                : 'LESSON PHASE — RATING NOT SET'}
             </p>
           </div>
 
@@ -402,14 +516,14 @@ function TrainWorkspace() {
               ))}
             </select>
 
-            <BrutalistButton variant="outline" onClick={resetGame}>
+            <BrutalistButton variant="outline" onClick={resetBoardState}>
               <RefreshCw className="w-4 h-4 inline mr-1" /> NEW GAME
             </BrutalistButton>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Opening context & mastery */}
+          {/* Left Column: Opening context, opponent rating, move list */}
           <div className="lg:col-span-3 flex flex-col gap-6">
             <BrutalistCard>
               <div className="flex flex-col gap-2 border-b border-[#242A35] pb-3">
@@ -425,11 +539,10 @@ function TrainWorkspace() {
                 )}
               </div>
 
-              {/* Mastery progression */}
               <div className="flex flex-col gap-2 pt-3">
                 <div className="flex items-center justify-between font-mono text-xs">
                   <span className="font-bold text-[#94A0B8] flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#E5B842]" /> MASTERY
+                    <TrendingUp className="w-3.5 h-3.5 text-[#E5B842]" /> LINE MASTERY
                   </span>
                   <span className="font-black text-[#E5B842]">{masteryPct}%</span>
                 </div>
@@ -461,43 +574,15 @@ function TrainWorkspace() {
               </div>
             </BrutalistCard>
 
-            {/* Opponent strength ladder */}
-            <BrutalistCard className="flex flex-col gap-3">
-              <h4 className="font-extrabold text-[11px] uppercase tracking-widest text-[#94A0B8] border-b border-[#242A35] pb-2">
-                OPPONENT STRENGTH
-              </h4>
-              <div className="flex flex-col gap-1.5">
-                {OPPONENT_LEVELS.map(item => {
-                  const isActive = item.name === level.name;
-                  const isCleared = item.masteryFloor < level.masteryFloor;
-                  return (
-                    <div
-                      key={item.name}
-                      className={`px-3 py-2 border font-mono text-[11px] flex items-center justify-between ${
-                        isActive
-                          ? 'bg-[#181C24] border-[#E5B842] text-[#E5B842] font-black'
-                          : isCleared
-                            ? 'bg-[#0B0D10] border-[#242A35] text-[#10B981]'
-                            : 'bg-[#0B0D10] border-[#242A35] text-[#64748B]'
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                      <span>{item.masteryFloor}%+</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-[10px] text-[#94A0B8] leading-relaxed">{level.description}</p>
-              {nextLevel && (
-                <p className="text-[10px] font-mono font-bold text-[#E5B842]">
-                  {pendingUnlock > 0
-                    ? `DRILL ${pendingUnlock} MORE MOVE${pendingUnlock === 1 ? '' : 'S'} TO PROMOTE`
-                    : `NEXT: ${nextLevel.label.toUpperCase()} AT ${nextLevel.masteryFloor}%`}
-                </p>
-              )}
-            </BrutalistCard>
+            <OpponentControlPanel
+              progress={progress}
+              activeLevel={activeLevel}
+              offer={eloOffer}
+              onSetElo={handleSetElo}
+              onAcceptOffer={handleAcceptOffer}
+              onDeclineOffer={() => setEloOffer(null)}
+            />
 
-            {/* Move history */}
             {history.length > 0 && (
               <BrutalistCard className="flex flex-col gap-2">
                 <h4 className="font-extrabold text-[11px] uppercase tracking-widest text-[#94A0B8] border-b border-[#242A35] pb-2">
@@ -551,11 +636,15 @@ function TrainWorkspace() {
               classification={null}
               explanation={null}
               moveReview={moveReview}
-              opponent={{
-                label: level.label,
-                description: level.description,
-                isThinking: isOpponentThinking,
-              }}
+              opponent={
+                activeLevel
+                  ? {
+                      label: `${activeLevel.effectiveElo} ELO`,
+                      description: `Skill ${activeLevel.skill} · depth ${activeLevel.depth}`,
+                      isThinking: isOpponentThinking,
+                    }
+                  : null
+              }
               onShowHint={handleShowHint}
               hintMessage={hintMessage}
             />

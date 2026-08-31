@@ -2,7 +2,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Chess } from 'chess.js';
+import { Chess, Move } from 'chess.js';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ChessBoardWrapper } from '@/components/chess/ChessBoardWrapper';
 import { CoachPanel } from '@/components/chess/CoachPanel';
@@ -69,6 +69,11 @@ function TrainWorkspace() {
   const openingRef = useRef(opening);
   openingRef.current = opening;
 
+  // Mastery is written from an async callback, so the latest record is tracked in a ref rather
+  // than read inside a state updater (updaters are re-invoked in StrictMode and would
+  // double-count every drilled move).
+  const progressRef = useRef<OpeningProgressRecord | null>(null);
+
   // Guards against the opponent playing twice from the same position if the effect re-runs.
   const opponentMovedFromRef = useRef<string | null>(null);
 
@@ -122,10 +127,14 @@ function TrainWorkspace() {
       variationName: opening.variationName,
       userColor: opening.userColor,
     };
-    setProgress(createSeedProgress(seed));
+    const seeded = createSeedProgress(seed);
+    progressRef.current = seeded;
+    setProgress(seeded);
 
     loadMastery(seed).then(record => {
-      if (!cancelled) setProgress(record);
+      if (cancelled) return;
+      progressRef.current = record;
+      setProgress(record);
     });
 
     return () => {
@@ -211,7 +220,7 @@ function TrainWorkspace() {
       // Resolve the chosen move against the board: SAN first, UCI as a fallback for the case
       // where the engine's SAN conversion did not survive.
       const probe = new Chess(fen);
-      let played = null;
+      let played: Move | null = null;
       try {
         played = probe.move(chosenSan);
       } catch {
@@ -270,11 +279,12 @@ function TrainWorkspace() {
         ? 5
         : gradeFromClassification(review.category, usedHint);
 
-      setProgress(current => {
-        if (!current) return current;
-        void recordAttempt(current, { grade, fenBefore, usedHint }).then(setProgress);
-        return current;
-      });
+      const current = progressRef.current;
+      if (current) {
+        const updated = await recordAttempt(current, { grade, fenBefore, usedHint });
+        progressRef.current = updated;
+        setProgress(updated);
+      }
     },
     [analyzedFen, candidates, hintUsedForFen]
   );
@@ -284,7 +294,7 @@ function TrainWorkspace() {
       if (!isUserTurn || isOpponentThinking || isGameOver) return false;
 
       const probe = new Chess(fen);
-      let played = null;
+      let played: Move | null = null;
       try {
         played = probe.move({
           from: source,

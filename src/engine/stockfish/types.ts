@@ -51,8 +51,11 @@ export interface EngineConfiguration {
   searchMode: SearchProfileName;
   depth?: number;
   nodes?: number;
+  /** Wall-clock ceiling. Combined with depth, the search stops at whichever arrives first. */
   movetime?: number;
   multiPv: number;
   threads: number;
   hash: number;
+  /** Stockfish `Skill Level` (0-20). 20 is full strength; lower introduces controlled error. */
+  skillLevel: number;
 }

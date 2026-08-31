@@ -125,10 +125,14 @@ export class StockfishClient {
   }
 
   public analyze(request: AnalysisRequest): void {
-    // Invalidate and cancel previous active request
+    // Invalidate the previous request. It must be told it lost the worker, otherwise its
+    // promise never settles and whatever was awaiting it hangs forever.
     if (this.activeRequest) {
-      this.sendCommand('stop');
+      const superseded = this.activeRequest;
       this.activeRequest = null;
+      this.currentLinesMap.clear();
+      this.sendCommand('stop');
+      superseded.onError(new Error('Analysis superseded by a newer request'));
     }
 
     this.activeIdCounter++;
@@ -156,9 +160,11 @@ export class StockfishClient {
 
   public cancelActive(): void {
     if (this.activeRequest) {
-      this.sendCommand('stop');
+      const cancelled = this.activeRequest;
       this.activeRequest = null;
       this.currentLinesMap.clear();
+      this.sendCommand('stop');
+      cancelled.onError(new Error('Analysis cancelled'));
     }
   }
 }

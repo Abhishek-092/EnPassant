@@ -114,9 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      console.warn('Firebase popup failed, fallback to demo player:', err);
-      signInAsDemo('Forge Player');
+    } catch (err: any) {
+      // Don't auto-downgrade to demo with hardcoded accounts if the user simply cancelled or if popup was closed/blocked
+      console.error('Google Sign-in failed or was cancelled:', err);
+      throw err;
     }
   };
 
@@ -125,14 +126,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       uid: `demo_${Date.now()}`,
       email: 'student@enpassant.com',
       displayName: username,
-      rating: 1600,
+      rating: 1500,
       preferredColor: 'both',
-      chessComUsername: 'hikaru',
-      lichessUsername: 'magnuscarlsen',
+      chessComUsername: '',
+      lichessUsername: '',
     };
     setUser(demoProfile);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(demoProfile));
-    autoSyncManager.autoSync(demoProfile.chessComUsername, demoProfile.lichessUsername, true);
   };
 
   const logout = async () => {

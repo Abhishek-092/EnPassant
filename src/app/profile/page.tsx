@@ -171,7 +171,7 @@ export default function ProfilePage() {
                 type="text"
                 value={nameInput}
                 onChange={e => setNameInput(e.target.value)}
-                placeholder="e.g. Grandmaster Student"
+                placeholder="Enter your name"
                 className="w-full px-3.5 py-2.5 bg-[#181C24] border border-[#242A35] text-[#F0F3F8] focus:outline-none focus:border-[#E5B842]"
               />
             </div>
@@ -182,7 +182,7 @@ export default function ProfilePage() {
                 type="text"
                 value={chessComInput}
                 onChange={e => setChessComInput(e.target.value)}
-                placeholder="e.g. hikaru"
+                placeholder="Enter Chess.com username"
                 className="w-full px-3.5 py-2.5 bg-[#181C24] border border-[#242A35] text-[#F0F3F8] font-mono focus:outline-none focus:border-[#E5B842]"
               />
             </div>
@@ -193,7 +193,7 @@ export default function ProfilePage() {
                 type="text"
                 value={lichessInput}
                 onChange={e => setLichessInput(e.target.value)}
-                placeholder="e.g. magnuscarlsen"
+                placeholder="Enter Lichess username"
                 className="w-full px-3.5 py-2.5 bg-[#181C24] border border-[#242A35] text-[#F0F3F8] font-mono focus:outline-none focus:border-[#E5B842]"
               />
             </div>

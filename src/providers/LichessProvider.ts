@@ -99,7 +99,7 @@ export class LichessProvider implements IGameProvider {
   }
 
   /** Milliseconds from the PGN's UTCDate/UTCTime headers, for `until` paging. */
-  private parseTimestamp(header: Record<string, string | undefined>): number | null {
+  private parseTimestamp(header: Record<string, string | null | undefined>): number | null {
     const date = header.UTCDate || header.Date;
     if (!date) return null;
 
